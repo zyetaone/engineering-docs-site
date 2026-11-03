@@ -25,7 +25,7 @@
   </aside>
   <main id="content">
     <h1 id="agent-governance">Agent governance</h1>
-<p>How an AI agent gets an identity, what it may touch, and what stops it. The register of actual agents is <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/agent-register.yaml"><code>../governance/agent-register.yaml</code></a>; this document is the policy that register implements.</p>
+<p>How an AI agent gets an identity, what it may touch, and what stops it. The register of actual agents is <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/agent-register.yaml"><code>../governance/agent-register.yaml</code></a>; this document is the policy that register implements.</p>
 <h2 id="the-three-rules">The three rules</h2>
 <ol><li><strong>An agent is a GitHub App, never a person.</strong> No personal access token, no shared account, no "bot" that is really someone's login. An app has its own permissions, its own audit trail, and can be uninstalled in one action.</li><li><strong>Least privilege, scoped to named repositories.</strong> Install on selected repositories, never org-wide. Repository permission tops out at <code>write</code> — an agent can propose, not administer.</li><li><strong>An agent cannot merge or deploy.</strong> Its work arrives as a pull request. A human approves. The <code>protect-main</code> ruleset has no agent on its bypass list, and the <code>production</code> environment requires a platform reviewer who is not the person who triggered the run.</li></ol>
 <h2 id="identity-setup">Identity setup</h2>

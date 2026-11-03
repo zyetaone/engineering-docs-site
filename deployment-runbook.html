@@ -27,7 +27,7 @@
     <h1 id="deployment-runbook">Deployment runbook</h1>
 <p>The operator's document: how to stand this repository up in an organization, how to ship a release, how to deploy the website, and what to do when something goes wrong.</p>
 <p>Work top to bottom the first time. After that, jump to <a href="#routine-operations">Routine operations</a> or <a href="#rollback">Rollback</a>.</p>
-<p><strong>Ownership.</strong> One named person owns this runbook and ticks the boxes. Owners are listed in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/teams.yaml"><code>../governance/teams.yaml</code></a>. If nobody owns it, it is not a control.</p>
+<p><strong>Ownership.</strong> One named person owns this runbook and ticks the boxes. Owners are listed in <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/teams.yaml"><code>../governance/teams.yaml</code></a>. If nobody owns it, it is not a control.</p>
 <p><strong>Evidence rule.</strong> A step is complete when there is a command output, a run link, or a screenshot recorded in the phase record — not when the setting looked right. Every phase ends with an <em>Evidence</em> line for exactly that reason.</p>
 <hr />
 <h2 id="phase-0-preflight">Phase 0 — Preflight</h2>
@@ -35,7 +35,7 @@
 <h3 id="01-confirm-the-plan">0.1 Confirm the plan</h3>
 <p>SSO, SCIM, enterprise AI controls and audit streaming exist only on <strong>GitHub Enterprise Cloud</strong>. On Free or Team those toggles either do not appear or do nothing.</p>
 <pre><code class="language-sh">gh api orgs/&lt;org&gt; --jq '{plan: .plan.name, seats: .plan.filled_seats}'</code></pre>
-<p>If the answer is <code>free</code> or <code>team</code>, read <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/org.json"><code>../governance/org.json</code></a> <code>.plan_requirements</code> before promising anyone a control you cannot enable. A trial is available from the org's billing page.</p>
+<p>If the answer is <code>free</code> or <code>team</code>, read <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/org.json"><code>../governance/org.json</code></a> <code>.plan_requirements</code> before promising anyone a control you cannot enable. A trial is available from the org's billing page.</p>
 <h3 id="02-name-the-owners">0.2 Name the owners</h3>
 <p>Two or three, one of them the engineering lead. Owners can change everything, so the list stays short. Record them in <code>teams.yaml</code> → <code>owners</code>.</p>
 <pre><code class="language-sh">gh api orgs/&lt;org&gt;/members?role=admin --jq '.[].login'</code></pre>
@@ -100,7 +100,7 @@ gh api orgs/&lt;org&gt;/teams/ai-agents/members --jq 'length'                  #
 gh run list --branch main --limit 5
 # Which check names actually exist?
 gh api "repos/&lt;org&gt;/archify/commits/main/check-runs?per_page=100" --jq '[.check_runs[].name] | unique'</code></pre>
-<p>Compare that list with <code>required_status_checks</code> in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/rulesets/protect-main.json"><code>../governance/rulesets/protect-main.json</code></a>. If a context is missing, fix the job name in the workflow or remove the context from the file. Do not remove it to "get unblocked" without recording why.</p>
+<p>Compare that list with <code>required_status_checks</code> in <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/rulesets/protect-main.json"><code>../governance/rulesets/protect-main.json</code></a>. If a context is missing, fix the job name in the workflow or remove the context from the file. Do not remove it to "get unblocked" without recording why.</p>
 <h3 id="31-apply-the-rulesets">3.1 Apply the rulesets</h3>
 <pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope org
 enterprise/governance/apply.sh --org &lt;org&gt; --scope org --verify-checks</code></pre>
@@ -150,7 +150,7 @@ gh api repos/&lt;org&gt;/archify/code-scanning/analyses --jq '.[0] | {tool, crea
 <div class="table-wrap"><table><thead><tr><th>Environment</th><th>Protection</th><th>Used by</th></tr></thead><tbody><tr><td><code>production</code></td><td>platform reviewer, no self-review, tag <code>v*</code> + branch <code>main</code></td><td><code>release.yml</code></td></tr><tr><td><code>cloudflare-pages</code></td><td>platform reviewer, branch <code>main</code></td><td><code>ci.yml</code> deploy-cloudflare</td></tr><tr><td><code>github-pages</code></td><td>branch <code>main</code> only</td><td><code>ci.yml</code> deploy-pages</td></tr><tr><td><code>preview</code></td><td>none (non-production)</td><td><code>preview.yml</code></td></tr></tbody></table></div>
 <blockquote>[object Object]</blockquote>
 <h3 id="53-secrets-and-variables">5.3 Secrets and variables</h3>
-<p>Names and owners are in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/secrets-inventory.yaml"><code>../governance/secrets-inventory.yaml</code></a>. Values are set by hand and never committed.</p>
+<p>Names and owners are in <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/secrets-inventory.yaml"><code>../governance/secrets-inventory.yaml</code></a>. Values are set by hand and never committed.</p>
 <pre><code class="language-sh"># Cloudflare (production + preview environments)
 gh secret set CLOUDFLARE_API_TOKEN --env cloudflare-pages
 gh secret set CLOUDFLARE_API_TOKEN --env preview
@@ -183,7 +183,7 @@ gh secret list --env cloudflare-pages</code></pre>
 <h3 id="62-guardrails">6.2 Guardrails</h3>
 <ul><li>[ ] Copilot → Cloud agent → Internet access: firewall <strong>on</strong>, recommended allowlist, <strong>repository custom rules disabled</strong></li><li>[ ] Agent pull requests require workflow approval (Phase 5.1)</li><li>[ ] Agents are not on any ruleset bypass list</li><li>[ ] Agents hold no production secret and no deploy right</li></ul>
 <h3 id="63-register-before-installing">6.3 Register before installing</h3>
-<p>Add the entry to <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/agent-register.yaml"><code>../governance/agent-register.yaml</code></a> first: name, human owner, repos, permissions, approval date, review date. Then follow <a href="agent-governance.html"><code>agent-governance.md</code></a> to create the app and install it on selected repositories only.</p>
+<p>Add the entry to <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/agent-register.yaml"><code>../governance/agent-register.yaml</code></a> first: name, human owner, repos, permissions, approval date, review date. Then follow <a href="agent-governance.html"><code>agent-governance.md</code></a> to create the app and install it on selected repositories only.</p>
 <h3 id="64-approved-custom-agents">6.4 Approved custom agents</h3>
 <p>Define them once in a <code>.github-private</code> repository, and add a ruleset so only <code>org-admins</code> can change files under <code>agents/</code> and <code>.github/agents/</code>.</p>
 <p><strong>Verify:</strong></p>
