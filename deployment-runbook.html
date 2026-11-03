@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Deployment runbook · Archify Enterprise operations</title>
+<title>Deployment runbook · Zyeta Enterprise operations</title>
 <meta name="description" content="Setup phases, release procedure, rollback, incident and day-2 cadence." />
 <link rel="stylesheet" href="assets/site.css" />
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="topbar">
-  <div class="brand">Archify <small>Enterprise operations</small></div>
+  <div class="brand">Zyeta <small>Enterprise operations</small></div>
   <nav aria-label="Site">
     <a href="index.html">Overview</a>
     <a href="team-access.html">Team access</a>
@@ -87,7 +87,7 @@ enterprise/governance/apply.sh --org &lt;org&gt; --scope org</code></pre>
 <ul><li>[ ] Default visibility for new repositories: <strong>private</strong> (Settings → Repository)</li><li>[ ] <code>.github</code> repository holds <code>CONTRIBUTING.md</code>, <code>SECURITY.md</code> and PR templates</li><li>[ ] <code>template-service</code> exists with README, <code>.gitignore</code>, <code>LICENSE</code>, <code>CODEOWNERS</code>, and is marked as a template</li><li>[ ] Naming pattern agreed: <code>team-product-purpose</code> (<code>backend-billing-api</code>)</li></ul>
 <p><strong>Verify:</strong></p>
 <pre><code class="language-sh">gh api orgs/&lt;org&gt;/teams --jq '.[].slug'
-gh api orgs/&lt;org&gt;/teams/ai-agents/repos/&lt;org&gt;/archify --jq .permission   # write
+gh api orgs/&lt;org&gt;/teams/ai-agents/repos/&lt;org&gt;/&lt;repo&gt; --jq .permission   # write
 gh api orgs/&lt;org&gt;/teams/ai-agents/members --jq 'length'                  # 0</code></pre>
 <p><strong>Rollback:</strong> delete a team with <code>gh api -X DELETE orgs/&lt;org&gt;/teams/&lt;slug&gt;</code>. Doing so removes its access, so check nothing depends on it first.</p>
 <p><strong>Evidence:</strong> team list, <code>ai-agents</code> permission and empty member list.</p>
@@ -99,7 +99,7 @@ gh api orgs/&lt;org&gt;/teams/ai-agents/members --jq 'length'                  #
 <pre><code class="language-sh"># Has CI run on main yet?
 gh run list --branch main --limit 5
 # Which check names actually exist?
-gh api "repos/&lt;org&gt;/archify/commits/main/check-runs?per_page=100" --jq '[.check_runs[].name] | unique'</code></pre>
+gh api "repos/&lt;org&gt;/&lt;repo&gt;/commits/main/check-runs?per_page=100" --jq '[.check_runs[].name] | unique'</code></pre>
 <p>Compare that list with <code>required_status_checks</code> in <a href="https://github.com/zyetaone/engineering-docs/blob/main/enterprise/governance/rulesets/protect-main.json"><code>../governance/rulesets/protect-main.json</code></a>. If a context is missing, fix the job name in the workflow or remove the context from the file. Do not remove it to "get unblocked" without recording why.</p>
 <h3 id="31-apply-the-rulesets">3.1 Apply the rulesets</h3>
 <pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope org
@@ -122,18 +122,18 @@ enterprise/governance/apply.sh --org &lt;org&gt; --scope org --verify-checks</co
 <pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope repo</code></pre>
 <p>Turns on secret scanning, push protection, non-provider patterns, validity checks, and private vulnerability reporting.</p>
 <p>On private repositories these need <strong>Secret Protection</strong> and <strong>Code Security</strong>. The API returns <code>200</code> even when the feature is inactive on your plan, so read the response body, do not trust the status code:</p>
-<pre><code class="language-sh">gh api repos/&lt;org&gt;/archify --jq .security_and_analysis</code></pre>
+<pre><code class="language-sh">gh api repos/&lt;org&gt;/&lt;repo&gt; --jq .security_and_analysis</code></pre>
 <h3 id="42-code-scanning">4.2 Code scanning</h3>
 <p><code>security.yml</code> runs CodeQL on every pull request from this repository, on every push to <code>main</code>/<code>dev</code>, and weekly. Fork PRs are analysed post-merge because GitHub does not grant <code>security-events: write</code> to fork workflows — the <code>code_scanning</code> rule in the ruleset still blocks a merge on a high-severity alert.</p>
 <p>Alternatively, use <strong>default setup</strong> (Settings → Code security) and delete the <code>codeql</code> job. Pick one. Running both produces duplicate alerts and confusing counts.</p>
 <h3 id="43-dependency-updates">4.3 Dependency updates</h3>
 <p><code>.github/dependabot.yml</code> covers all three package roots plus Actions, grouped and weekly. Dependabot alerts alone do not patch anything; the update PRs are the patching mechanism.</p>
-<pre><code class="language-sh">gh api repos/&lt;org&gt;/archify/vulnerability-alerts -i | head -1     # 204 = on</code></pre>
+<pre><code class="language-sh">gh api repos/&lt;org&gt;/&lt;repo&gt;/vulnerability-alerts -i | head -1     # 204 = on</code></pre>
 <h3 id="44-who-reviews-alerts">4.4 Who reviews alerts</h3>
 <p>The security team, weekly, in a recorded slot. See <a href="#day-2-calendar">Day-2 calendar</a>.</p>
 <p><strong>Verify:</strong></p>
 <pre><code class="language-sh">enterprise/governance/verify.sh --org &lt;org&gt; --repo &lt;org&gt;/archify | sed -n '/Repository settings/,$p'
-gh api repos/&lt;org&gt;/archify/code-scanning/analyses --jq '.[0] | {tool, created_at}'</code></pre>
+gh api repos/&lt;org&gt;/&lt;repo&gt;/code-scanning/analyses --jq '.[0] | {tool, created_at}'</code></pre>
 <p><strong>Rollback:</strong> disable a scanner in the UI. Push protection is the last one to turn off — with agents writing code, it matters more, not less.</p>
 <p><strong>Evidence:</strong> <code>security_and_analysis</code> output, first CodeQL analysis link, first Dependabot PR.</p>
 <hr />
@@ -170,7 +170,7 @@ gh workflow run security.yml
 gh run watch</code></pre>
 <p>Expect <code>security / action pins</code> to fail until Phase 0.4 is committed.</p>
 <p><strong>Verify:</strong></p>
-<pre><code class="language-sh">gh api repos/&lt;org&gt;/archify/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
+<pre><code class="language-sh">gh api repos/&lt;org&gt;/&lt;repo&gt;/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
 gh secret list --env cloudflare-pages</code></pre>
 <p><strong>Rollback:</strong> an environment with no reviewer is inert, not dangerous — remove the reviewer requirement rather than the environment if a release is stuck, and restore it immediately after.</p>
 <p><strong>Evidence:</strong> Actions policy screenshot, environment list with protection rules, secret names (never values), first green <code>ci.yml</code> and <code>security.yml</code> run links.</p>
@@ -188,7 +188,7 @@ gh secret list --env cloudflare-pages</code></pre>
 <p>Define them once in a <code>.github-private</code> repository, and add a ruleset so only <code>org-admins</code> can change files under <code>agents/</code> and <code>.github/agents/</code>.</p>
 <p><strong>Verify:</strong></p>
 <pre><code class="language-sh">gh api orgs/&lt;org&gt;/installations --jq '.[] | {app: .app_slug, selection: .repository_selection}'
-gh api orgs/&lt;org&gt;/teams/ai-agents/repos/&lt;org&gt;/archify --jq .permission   # write, never admin</code></pre>
+gh api orgs/&lt;org&gt;/teams/ai-agents/repos/&lt;org&gt;/&lt;repo&gt; --jq .permission   # write, never admin</code></pre>
 <p><strong>Rollback:</strong> uninstall the app (<code>gh api -X DELETE orgs/&lt;org&gt;/installations/&lt;id&gt;</code>). That revokes every token it holds, immediately. Update the register in the same change.</p>
 <p><strong>Evidence:</strong> AI controls screenshots, installation list, register entry, one agent-authored pull request that required a human approval to merge.</p>
 <hr />
@@ -220,7 +220,7 @@ gh api "orgs/&lt;org&gt;/audit-log?per_page=100&amp;phrase=action:repo.change_me
 <ol><li><strong>Tag.</strong> Stable releases need an annotated tag, and the tag must match <code>archify/package.json</code>:</li></ol>
 <p>   ``<code>sh    git tag -a v3.3.0 -m "archify 3.3.0"    git push origin v3.3.0    </code>``</p>
 <ol><li><strong>Approve the production gate.</strong> <code>release.yml</code> waits on the <code>production</code> environment. A platform reviewer — not the person who pushed the tag — approves:</li></ol>
-<p>   ``<code>sh    gh run list --workflow release.yml --limit 1    gh api repos/&lt;org&gt;/archify/actions/runs/&lt;run_id&gt;/pending_deployments \      --jq '.[] | {environment: .environment.name, id}'    gh api -X POST repos/&lt;org&gt;/archify/actions/runs/&lt;run_id&gt;/pending_deployments \      -F environment_ids[]=&lt;environment_id&gt; -f state=approved -f comment="Release v3.3.0 approved"    </code>``</p>
+<p>   ``<code>sh    gh run list --workflow release.yml --limit 1    gh api repos/&lt;org&gt;/&lt;repo&gt;/actions/runs/&lt;run_id&gt;/pending_deployments \      --jq '.[] | {environment: .environment.name, id}'    gh api -X POST repos/&lt;org&gt;/&lt;repo&gt;/actions/runs/&lt;run_id&gt;/pending_deployments \      -F environment_ids[]=&lt;environment_id&gt; -f state=approved -f comment="Release v3.3.0 approved"    </code>``</p>
 <p>   The job then re-runs the full suite, checks the archive is deterministic, and    publishes the Release with <code>archify.zip</code> attached.</p>
 <ol><li><strong>Publish the update manifest in a follow-up commit.</strong> <code>stable.json</code> must point at the Release that now exists. The <code>published-update-manifest</code> gate verifies the asset, the tagged archive and the digest before the site deploys — that is why the manifest is a separate commit and not part of the tag.</li></ol>
 <ol><li><strong>Confirm provenance.</strong> <code>provenance.yml</code> runs on <code>release: published</code> and attaches <code>SHA256SUMS.txt</code> and a CycloneDX SBOM:</li></ol>
@@ -229,7 +229,7 @@ gh api "orgs/&lt;org&gt;/audit-log?per_page=100&amp;phrase=action:repo.change_me
 <h3 id="deploy-the-website">Deploy the website</h3>
 <p>Automatic. A push to <code>main</code> deploys GitHub Pages after every required gate, and Cloudflare Pages if <code>CLOUDFLARE_PAGES_PROJECT</code> is set. Both jobs re-check that <code>main</code> still points at the commit they built, and skip themselves as obsolete if it does not.</p>
 <pre><code class="language-sh">gh run list --workflow ci.yml --branch main --limit 3
-gh api repos/&lt;org&gt;/archify/deployments --jq '.[0:5][] | {environment, ref, created_at}'</code></pre>
+gh api repos/&lt;org&gt;/&lt;repo&gt;/deployments --jq '.[0:5][] | {environment, ref, created_at}'</code></pre>
 <h3 id="preview-a-website-change">Preview a website change</h3>
 <p>Automatic for a same-repo pull request touching <code>website/**</code>. The URL is posted as a comment marked <code>&lt;!-- archify-preview --&gt;</code>, updated in place on each push. Fork PRs are skipped by design.</p>
 <h3 id="hotfix">Hotfix</h3>
@@ -253,7 +253,7 @@ enterprise/governance/apply.sh --org &lt;org&gt;</code></pre>
 <div class="table-wrap"><table><thead><tr><th>Severity</th><th>Example</th><th>Response</th></tr></thead><tbody><tr><td>SEV1</td><td>Published archive does not match its tag; a secret was pushed; an agent merged code</td><td>Contain within 15 minutes, notify owners, rotate credentials</td></tr><tr><td>SEV2</td><td>Required check permanently red; deploy blocked; drift persists after re-apply</td><td>Fix within a business day</td></tr><tr><td>SEV3</td><td>A single scanner noisy; a docs build flaky</td><td>Next scheduled review</td></tr></tbody></table></div>
 <h3 id="contain">Contain</h3>
 <pre><code class="language-sh"># Stop all workflows in the repository.
-gh api -X PUT repos/&lt;org&gt;/archify/actions/permissions -F enabled=false
+gh api -X PUT repos/&lt;org&gt;/&lt;repo&gt;/actions/permissions -F enabled=false
 
 # Revoke a leaked token or a compromised agent.
 gh api -X DELETE orgs/&lt;org&gt;/installations/&lt;installation_id&gt;
@@ -295,11 +295,11 @@ gh api orgs/&lt;org&gt;/teams/ai-agents/members --jq 'length'
 # Protection
 gh api orgs/&lt;org&gt;/rulesets --jq '.[] | {name, target, enforcement}'
 gh api orgs/&lt;org&gt;/rulesets/&lt;id&gt; --jq '.rules[].type'
-gh api repos/&lt;org&gt;/archify/environments --jq '.environments[].name'
+gh api repos/&lt;org&gt;/&lt;repo&gt;/environments --jq '.environments[].name'
 
 # Scanning
-gh api repos/&lt;org&gt;/archify --jq .security_and_analysis
-gh api repos/&lt;org&gt;/archify/code-scanning/analyses --jq '.[0]'
+gh api repos/&lt;org&gt;/&lt;repo&gt; --jq .security_and_analysis
+gh api repos/&lt;org&gt;/&lt;repo&gt;/code-scanning/analyses --jq '.[0]'
 
 # Release
 gh run list --workflow release.yml --limit 5
