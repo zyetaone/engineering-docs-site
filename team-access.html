@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Team access · Archify Enterprise operations</title>
+<meta name="description" content="Who gets which role, what the Team plan includes, and how to grant or remove access." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar">
+  <div class="brand">Archify <small>Enterprise operations</small></div>
+  <nav aria-label="Site">
+    <a href="index.html">Overview</a>
+    <a href="team-access.html">Team access</a>
+    <a href="deployment-runbook.html">Runbook</a>
+    <a href="diagrams.html">Diagrams</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="Contents">
+    <h2>Start</h2><ol><li><a href="index.html">Overview</a></li></ol><h2>Access</h2><ol><li><a href="team-access.html" class="active">Team access</a></li></ol><h2>Delivery</h2><ol><li><a href="pipeline-architecture.html">Pipeline</a></li></ol><h2>Controls</h2><ol><li><a href="security-controls.html">Security controls</a></li><li><a href="agent-governance.html">Agent governance</a></li></ol><h2>Operations</h2><ol><li><a href="deployment-runbook.html">Runbook</a></li></ol><h2>Reference</h2><ol><li><a href="diagrams.html">Diagrams</a></li></ol>
+    <h2>On this page</h2><div class="toc"><a class="lvl2" href="#1-what-the-team-plan-actually-gives-you">1. What the Team plan actually gives you</a><a class="lvl3" href="#included-and-load-bearing-for-us">Included and load-bearing for us</a><a class="lvl3" href="#not-included-plan-around-these">Not included — plan around these</a><a class="lvl2" href="#2-the-model-in-one-picture">2. The model in one picture</a><a class="lvl3" href="#the-permission-that-decides-everything-who-can-approve">The permission that decides everything: who can approve</a><a class="lvl2" href="#3-team-roster-and-repository-roles">3. Team roster and repository roles</a><a class="lvl3" href="#where-each-role-stops">Where each role stops</a><a class="lvl2" href="#4-traps-that-cost-an-afternoon-each">4. Traps that cost an afternoon each</a><a class="lvl2" href="#5-personas-exact-steps">5. Personas → exact steps</a><a class="lvl3" href="#new-engineer">New engineer</a><a class="lvl3" href="#reviewer-senior-engineer">Reviewer / senior engineer</a><a class="lvl3" href="#platform-on-call">Platform on-call</a><a class="lvl3" href="#security-reviewer">Security reviewer</a><a class="lvl3" href="#contractor">Contractor</a><a class="lvl3" href="#ai-agent">AI agent</a><a class="lvl3" href="#product-design-finance">Product, design, finance</a><a class="lvl3" href="#leaver">Leaver</a><a class="lvl2" href="#6-if-the-repository-must-stay-private">6. If the repository must stay private</a><a class="lvl2" href="#7-cost-model">7. Cost model</a><a class="lvl2" href="#8-setup-sequence">8. Setup sequence</a><a class="lvl2" href="#9-what-changed-in-this-repository-because-of-the-team-plan">9. What changed in this repository because of the Team plan</a></div>
+  </aside>
+  <main id="content">
+    <h1 id="team-based-access-model">Team-based access model</h1>
+<p>How access works on this organization at <strong>GitHub Team</strong> ($4 per user per month), who gets what, and the exact steps to grant or remove it.</p>
+<p>Verified against GitHub's pricing page, rulesets docs, environments docs, CODEOWNERS docs and the repository-roles permission matrix on 2026-11-03. Plan features move; re-check the three plan-dependent items in <a href="#1-what-the-team-plan-actually-gives-you">§1</a> before promising them.</p>
+<hr />
+<h2 id="1-what-the-team-plan-actually-gives-you">1. What the Team plan actually gives you</h2>
+<p>Team is enough for almost everything this repository needs. Three things are not included, and one of them silently removes a control rather than blocking it.</p>
+<h3 id="included-and-load-bearing-for-us">Included and load-bearing for us</h3>
+<div class="table-wrap"><table><thead><tr><th>Capability</th><th>Team</th><th>Used by</th></tr></thead><tbody><tr><td>Repository rules / protected branches on <strong>private</strong> repos</td><td>Yes</td><td><code>protect-main</code></td></tr><tr><td><strong>Organization rulesets</strong></td><td>Yes (since June 2025)</td><td><code>rulesets/*.json</code></td></tr><tr><td>Code owners + <em>require review from Code Owners</em></td><td>Yes</td><td><code>.github/CODEOWNERS</code></td></tr><tr><td>Required and multiple PR reviewers</td><td>Yes</td><td>ruleset <code>pull_request</code> rule</td></tr><tr><td>Environment deployment branches and secrets</td><td>Yes</td><td><code>cloudflare-pages</code>, <code>preview</code></td></tr><tr><td>Secret scanning + push protection on private repos</td><td>Yes</td><td><code>repository.json</code></td></tr><tr><td>Validity checks, generic patterns, custom patterns</td><td>Yes</td><td>secret scanning</td></tr><tr><td>CodeQL / code scanning on private repos</td><td>Yes</td><td><code>security.yml</code></td></tr><tr><td>Dependency review action</td><td>Yes</td><td><code>security.yml</code></td></tr><tr><td>SBOM export</td><td>Yes</td><td><code>security.yml</code></td></tr><tr><td>Required 2FA, audit log (UI), RBAC, teams</td><td>Yes</td><td>Phases 1–2</td></tr><tr><td>Actions minutes</td><td>3,000/month (private)</td><td>see <a href="#7-cost-model">§7</a></td></tr></tbody></table></div>
+<h3 id="not-included-plan-around-these">Not included — plan around these</h3>
+<div class="table-wrap"><table><thead><tr><th>Gap</th><th>Effect on this design</th><th>Workaround</th></tr></thead><tbody><tr><td><strong>Environment protection rules on private repos</strong></td><td>On a <strong>private</strong> repo, the <code>production</code> environment may be creatable with secrets and branch policies, but <strong>Required reviewers</strong> is a public-repo feature on Team. The release gate disappears — silently.</td><td>Keep the repo <strong>public</strong> (it is Apache-2.0), or gate releases on tag authority instead — see <a href="#6-if-the-repository-must-stay-private">§6</a>.</td></tr><tr><td><strong>Audit log API</strong></td><td><code>gh api orgs/&lt;org&gt;/audit-log</code> returns 404. The incident-preservation command in the runbook cannot run.</td><td>Review in the UI (Org Settings → Logs), export manually, or move to Enterprise when audit retention matters.</td></tr><tr><td><strong>Artifact attestations on private repos</strong></td><td><code>actions/attest-build-provenance</code> cannot run. <code>provenance.yml</code> now skips it with a notice and still publishes <code>SHA256SUMS.txt</code>.</td><td>Public repo, or Enterprise.</td></tr><tr><td>SAML SSO, SCIM, team sync</td><td>No automatic joiners/leavers</td><td>Manual offboarding checklist (Phase 7)</td></tr><tr><td>Custom repository roles</td><td>Only the five fixed roles exist</td><td>Map personas onto read/triage/write/maintain/admin</td></tr><tr><td>Merge queue on private repos</td><td>Not available</td><td><code>strict_required_status_checks_policy</code> already requires an up-to-date branch</td></tr><tr><td>Ruleset <code>evaluate</code> (log-only) mode</td><td>Cannot dry-run a ruleset</td><td>Use <code>--dry-run</code> in <code>apply.sh</code>, or apply to one repository first</td></tr></tbody></table></div>
+<blockquote>[object Object]</blockquote>
+<hr />
+<h2 id="2-the-model-in-one-picture">2. The model in one picture</h2>
+<pre><code class="language-text">Organization (base permission: none)
+│
+├── org-admins ......................... admin   → everything, only bypass actor
+├── engineering ........................ read    → sees code, cannot approve or push
+│   ├── platform ....................... maintain → CI, releases, repo settings
+│   ├── backend ........................ write    → pushes and approves
+│   ├── frontend ....................... write
+│   └── mobile ......................... write
+├── security ........................... write    → must be write to approve PRs
+└── ai-agents .......................... write    → no people, GitHub Apps only</code></pre>
+<p>Three rules produce that shape:</p>
+<ol><li><strong>Base permission is <code>none</code>.</strong> A member sees nothing until a team grants it. There is no "everyone can read by default" floor to leak a repository.</li><li><strong>Access is granted to teams, never to people.</strong> Removing someone from a team removes every repository that team can see, in one action.</li><li><strong>Approval requires <code>write</code>.</strong> This is the part most people get wrong — see below.</li></ol>
+<h3 id="the-permission-that-decides-everything-who-can-approve">The permission that decides everything: who can approve</h3>
+<p>From GitHub's repository-role matrix, <em>"Approve or request changes to a pull request with required reviews"</em> requires <strong>write</strong> or higher. A <code>read</code> or <code>triage</code> member can comment, review informally, and request changes — but their approval does <strong>not</strong> satisfy the ruleset.</p>
+<p>So "read-only reviewer" is not a thing on GitHub. If someone must approve, they need <code>write</code>, and <code>write</code> also means they can push to unprotected branches.</p>
+<div class="table-wrap"><table><thead><tr><th>Role</th><th>Push</th><th>Merge PR</th><th>Approve required review</th><th>Act as Code Owner</th><th>Edit workflows/secrets</th><th>Manage rulesets &amp; access</th><th>Delete repo</th></tr></thead><tbody><tr><td><code>read</code></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td><code>triage</code></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td><code>write</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr><tr><td><code>maintain</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr><tr><td><code>admin</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr></tbody></table></div>
+<p><code>maintain</code> adds repository settings (description, topics, merge settings, wiki, Pages source). It still cannot manage access, rulesets, webhooks, or delete.</p>
+<hr />
+<h2 id="3-team-roster-and-repository-roles">3. Team roster and repository roles</h2>
+<p>This is the desired state in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/teams.yaml"><code>../governance/teams.yaml</code></a>, applied by <code>apply.sh --scope org</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Team</th><th>Parent</th><th>People</th><th>Role on <code>archify</code></th><th>Why that role</th></tr></thead><tbody><tr><td><code>org-admins</code></td><td>—</td><td>2–3 owners</td><td><code>admin</code></td><td>Only team that can change rulesets, environments, access, and the only ruleset bypass</td></tr><tr><td><code>engineering</code></td><td>—</td><td>everyone in engineering</td><td><code>read</code></td><td>Baseline visibility; cannot approve, so it is safe as a parent</td></tr><tr><td><code>platform</code></td><td><code>engineering</code></td><td>2–3</td><td><code>maintain</code></td><td>Runs CI and releases, manages repo settings; <strong>not</strong> access or rulesets</td></tr><tr><td><code>security</code></td><td>—</td><td>2</td><td><code>write</code></td><td>Must approve security-sensitive PRs and dismiss alerts — both need write</td></tr><tr><td><code>ai-agents</code></td><td>—</td><td><strong>none</strong></td><td><code>write</code></td><td>Installation target for GitHub Apps; holds no humans</td></tr></tbody></table></div>
+<p><code>frontend</code>, <code>backend</code>, <code>mobile</code> appear in the org-level template for other repositories. They do not exist for <code>archify</code> until there is more than one codebase; adding empty teams creates the illusion of structure.</p>
+<h3 id="where-each-role-stops">Where each role stops</h3>
+<ul><li><strong><code>platform</code> cannot configure environments.</strong> Only repository <strong>admin</strong> can. That is deliberate: environment configuration is done by <code>apply.sh</code> with an owner token, and a maintainer cannot quietly add a reviewer-less environment.</li><li><strong><code>security</code> can push.</strong> Accepted, because the alternative — read-only — cannot approve. The <code>protect-main</code> ruleset still stops a direct push to <code>main</code>.</li><li><strong><code>engineering</code> cannot approve.</strong> If someone needs to approve, move them into the area team. Do not raise the parent team's role; that would grant approval to everyone at once.</li></ul>
+<hr />
+<h2 id="4-traps-that-cost-an-afternoon-each">4. Traps that cost an afternoon each</h2>
+<div class="table-wrap"><table><thead><tr><th>Trap</th><th>What happens</th><th>Rule</th></tr></thead><tbody><tr><td>Team must be <strong>visible + write</strong> to be a Code Owner</td><td>A secret or read-only team in CODEOWNERS is silently ignored; no reviewer is requested and "require Code Owner review" can never be satisfied</td><td>Only <code>write</code>+ visible teams in CODEOWNERS</td></tr><tr><td>Child teams <strong>inherit</strong>, never subtract</td><td><code>engineering</code> at <code>write</code> makes every child <code>write</code>; you cannot grant a child less</td><td>Keep the parent at the lowest role that is safe for everyone</td></tr><tr><td>Secret teams cannot nest and cannot have children</td><td><code>ai-agents</code> as secret would break the hierarchy</td><td>Keep teams visible (privacy <code>closed</code>)</td></tr><tr><td>Teams cannot contain <strong>outside collaborators</strong></td><td>A contractor must be an org member (a paid seat) to be on a team</td><td>Add contractors as members with a review date, or as a repo collaborator on a public repo (free)</td></tr><tr><td>Deleting a team removes its access everywhere</td><td>A "cleanup" deletes production access</td><td>Archive or empty the team; delete only after <code>verify.sh</code> shows nothing depends on it</td></tr><tr><td>Team maintainers manage <strong>membership</strong>, not access</td><td>A team maintainer cannot add a repository to the team</td><td>Repository admin or org owner does that</td></tr><tr><td>Org owners have admin on every repository</td><td>Adding a fourth owner widens blast radius</td><td>Keep owners at 2–3; delegate with the Security manager / CI-CD admin org roles instead</td></tr></tbody></table></div>
+<hr />
+<h2 id="5-personas-exact-steps">5. Personas → exact steps</h2>
+<p>Run as an org owner. <code>$ORG</code> is your organization slug.</p>
+<h3 id="new-engineer">New engineer</h3>
+<pre><code class="language-sh">gh api -X PUT "orgs/$ORG/teams/engineering/memberships/&lt;login&gt;" -f role=member
+gh api -X PUT "orgs/$ORG/teams/backend/memberships/&lt;login&gt;" -f role=member   # write on their repos</code></pre>
+<p>They can read every repository <code>engineering</code> can see, push and approve on backend repositories, and cannot merge to <code>main</code> without a second approval.</p>
+<h3 id="reviewer-senior-engineer">Reviewer / senior engineer</h3>
+<p>Same as above — <strong>do not</strong> create a "reviewers" team. Approval follows from <code>write</code> on the area team, and a separate reviewers team would be a second, drifting source of truth.</p>
+<h3 id="platform-on-call">Platform on-call</h3>
+<pre><code class="language-sh">gh api -X PUT "orgs/$ORG/teams/platform/memberships/&lt;login&gt;" -f role=member</code></pre>
+<p><code>maintain</code> on the repository, <code>main</code> role in the <code>platform</code> team so they can manage rota membership themselves. They can re-run workflows and publish a release once the production reviewer approves.</p>
+<h3 id="security-reviewer">Security reviewer</h3>
+<pre><code class="language-sh">gh api -X PUT "orgs/$ORG/teams/security/memberships/&lt;login&gt;" -f role=member</code></pre>
+<p><code>write</code>, plus the <strong>Security manager</strong> organization role if it is offered on your plan (Org Settings → People → Roles). Security manager grants alert and policy management without repository administration — verify it appears before relying on it; custom organization roles are Enterprise-only.</p>
+<h3 id="contractor">Contractor</h3>
+<p>Public repository: add as an outside collaborator on <code>read</code> — no seat, no team membership, no access to anything else.</p>
+<pre><code class="language-sh">gh api -X PUT "repos/$ORG/archify/collaborators/&lt;login&gt;" -f permission=pull</code></pre>
+<p>Private repository: outside collaborators consume a $4 seat. Prefer a time-boxed team membership with a review date recorded in the access log.</p>
+<h3 id="ai-agent">AI agent</h3>
+<p>Never a person, never a PAT. Create a GitHub App, install it on selected repositories, and grant it through <code>ai-agents</code>:</p>
+<pre><code class="language-sh">gh api orgs/$ORG/installations --jq '.[] | {app: .app_slug, selection: .repository_selection}'</code></pre>
+<p>Agents consume <strong>no seats</strong> — that is one reason to prefer an App over a bot account.</p>
+<h3 id="product-design-finance">Product, design, finance</h3>
+<p><code>read</code> via <code>engineering</code> if they are engineers; otherwise a <code>triage</code>-only team for issue management. Do not grant write to someone who will never push.</p>
+<h3 id="leaver">Leaver</h3>
+<pre><code class="language-sh">gh api -X DELETE "orgs/$ORG/members/&lt;login&gt;"
+gh api "orgs/$ORG/teams" --jq '.[].slug' | while read -r t; do
+  gh api -X DELETE "orgs/$ORG/teams/$t/memberships/&lt;login&gt;" 2&gt;/dev/null || true
+done</code></pre>
+<p>Then revoke tokens/SSH keys, rotate any shared secret they could read (<code>secrets-inventory.yaml</code> says which), and record the date.</p>
+<hr />
+<h2 id="6-if-the-repository-must-stay-private">6. If the repository must stay private</h2>
+<p>On Team + private, the <code>production</code> environment cannot require reviewers. Keep the same outcome with two other controls:</p>
+<ol><li><strong>Tag authority as the human gate.</strong> <code>protect-release-tags</code> already restricts <code>v*</code> tag creation to <code>OrganizationAdmin</code> (bypass actors). Only an owner can start a release, and that is a recorded, attributable act.</li><li><strong>Two approvals on the release PR.</strong> Raise <code>required_approving_review_count</code> to 2 for the promotion PR <code>dev → main</code>, so the code being released has two humans behind it.</li></ol>
+<p>Then record the deviation in the phase record:</p>
+<pre><code class="language-text">Deviations: production environment has no required reviewers — Team plan, private repo.
+            Compensating controls: tag creation restricted to org-admins; 2 approvals on release PR.
+            Owner: platform. Revisit on Enterprise upgrade or if the repo becomes public.</code></pre>
+<p><code>verify.sh</code> will keep reporting the missing reviewer as drift. That is correct: an accepted risk should stay visible, not be silenced.</p>
+<hr />
+<h2 id="7-cost-model">7. Cost model</h2>
+<div class="table-wrap"><table><thead><tr><th>Item</th><th>Team</th><th>Notes</th></tr></thead><tbody><tr><td>Seat</td><td>$4 / user / month</td><td>Members and private-repo outside collaborators</td></tr><tr><td>Public repository collaborators</td><td>Free, unlimited</td><td>No seat for a public repo collaborator</td></tr><tr><td>GitHub Apps (agents)</td><td>No seat</td><td>One installation, selected repositories</td></tr><tr><td>Actions minutes</td><td>3,000 / month private; free on public</td><td><code>ci.yml</code> browser shards are the expensive part</td></tr><tr><td>Packages storage</td><td>2 GB</td><td>Not used by this repository</td></tr></tbody></table></div>
+<p>At 8 people that is <strong>$32/month</strong>. The pipeline's own cost is the risk: a full regression with two browser shards, two WebM jobs and a three-OS package smoke can consume 40–80 minutes per run. Thirty full runs in a month approaches the 3,000-minute allowance — which is exactly why <code>ci-scope.mjs</code> classifies docs-only and core changes instead of running everything. Do not "fix" a slow pipeline by removing the classifier.</p>
+<hr />
+<h2 id="8-setup-sequence">8. Setup sequence</h2>
+<ol><li><strong>Org exists on Team.</strong> <code>gh api orgs/$ORG --jq .plan.name</code> → <code>team</code>.</li><li><strong>Decide repository visibility</strong> — public (recommended: environment reviewers, attestations, free collaborators) or private (see <a href="#6-if-the-repository-must-stay-private">§6</a>).</li><li><strong>Base permission <code>none</code></strong>, 2FA required, private-only creation: <code>enterprise/governance/apply.sh --org $ORG --scope org</code>.</li><li><strong>Create teams in parent order</strong> — <code>org-admins</code>, <code>engineering</code>, <code>platform</code>, <code>security</code>, <code>ai-agents</code>. <code>apply.sh</code> does this; a child cannot be created before its parent.</li><li><strong>Transfer or fork the repository into the organization.</strong> Teams only apply to organization-owned repositories. A repository under a personal account has no teams.</li><li><strong>Grant team roles</strong> on the repository (<code>teams.yaml</code> → <code>repositories.archify</code>).</li><li><strong>Write CODEOWNERS with teams that have write</strong>, and make the CODEOWNERS file itself owned by <code>org-admins</code>.</li><li><strong>Apply the rulesets</strong> — after the required checks have reported once.</li><li><strong>Configure environments</strong> and, on a public repo, the <code>production</code> reviewer team.</li><li><strong>Verify:</strong></li></ol>
+<pre><code class="language-sh">gh api orgs/$ORG --jq '{plan: .plan.name, base: .default_repository_permission, tfa: .two_factor_requirement_enabled}'
+gh api orgs/$ORG/teams --jq '.[] | {slug, parent: .parent.slug}'
+gh api orgs/$ORG/teams/security/repos/$ORG/archify --jq .permission      # write
+gh api orgs/$ORG/teams/ai-agents/members --jq 'length'                    # 0
+gh api repos/$ORG/archify/environments/production --jq '.protection_rules'
+enterprise/governance/verify.sh --org $ORG --repo $ORG/archify</code></pre>
+<hr />
+<h2 id="9-what-changed-in-this-repository-because-of-the-team-plan">9. What changed in this repository because of the Team plan</h2>
+<div class="table-wrap"><table><thead><tr><th>File</th><th>Change</th></tr></thead><tbody><tr><td><code>governance/teams.yaml</code></td><td><code>security</code> raised from <code>read</code> to <code>write</code> — approval requires write</td></tr><tr><td><code>governance/org.json</code></td><td><code>plan_requirements</code> re-stated for Team, with the three gaps named</td></tr><tr><td><code>.github/workflows/provenance.yml</code></td><td>Attestation skipped with a notice when the repository is private</td></tr><tr><td><code>docs/deployment-runbook.md</code></td><td>Phase 5 environment caveat, Phase 7 audit-log API note, rollback <code>evaluate</code> note</td></tr><tr><td><code>docs/security-controls.md</code></td><td>Audit-log and attestation rows marked plan-dependent</td></tr></tbody></table></div>
+    <div class="pagefoot"><a href="index.html"><span class="dir">Previous</span>Overview</a><a class="next" href="pipeline-architecture.html"><span class="dir">Next</span>Pipeline</a></div>
+  </main>
+</div>
+</body>
+</html>

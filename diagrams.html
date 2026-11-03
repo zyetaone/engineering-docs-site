@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Diagrams · Archify Enterprise operations</title>
+<meta name="description" content="Six diagrams generated from JSON sources by the Archify CLI." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar">
+  <div class="brand">Archify <small>Enterprise operations</small></div>
+  <nav aria-label="Site">
+    <a href="index.html">Overview</a>
+    <a href="team-access.html">Team access</a>
+    <a href="deployment-runbook.html">Runbook</a>
+    <a href="diagrams.html">Diagrams</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="Contents">
+    <h2>Start</h2><ol><li><a href="index.html">Overview</a></li></ol><h2>Access</h2><ol><li><a href="team-access.html">Team access</a></li></ol><h2>Delivery</h2><ol><li><a href="pipeline-architecture.html">Pipeline</a></li></ol><h2>Controls</h2><ol><li><a href="security-controls.html">Security controls</a></li><li><a href="agent-governance.html">Agent governance</a></li></ol><h2>Operations</h2><ol><li><a href="deployment-runbook.html">Runbook</a></li></ol><h2>Reference</h2><ol><li><a href="diagrams.html" class="active">Diagrams</a></li></ol>
+    <h2>On this page</h2><div class="toc"><a class="lvl2" href="#team-hierarchy-and-repository-roles">Team hierarchy and repository roles</a><a class="lvl2" href="#enterprise-control-plane">Enterprise control plane</a><a class="lvl2" href="#merge-gate">Merge gate</a><a class="lvl2" href="#release-lifecycle">Release lifecycle</a><a class="lvl2" href="#release-approval-sequence">Release approval sequence</a><a class="lvl2" href="#thirty-day-rollout">Thirty-day rollout</a></div>
+  </aside>
+  <main id="content">
+    <h1 id="diagrams">Diagrams</h1>
+<p>Six diagrams, each generated from a JSON source in <code>enterprise/diagrams/</code> and validated by the Archify CLI before it is published. The images below are exported from the same SVG the interactive artifact renders, so a change to the source changes both.</p>
+<pre><code class="language-sh">node enterprise/diagrams/build.mjs    # validate → render → export</code></pre>
+<h2 id="team-hierarchy-and-repository-roles">Team hierarchy and repository roles</h2>
+<figure class="diagram narrow">
+  <div class="cap">
+    <b>Team hierarchy</b>
+    <span class="kind">tree</span>
+    <a href="diagrams/team-access.html">Open interactive ↗</a>
+  </div>
+  <a class="frame" href="diagrams/team-access.html">
+    <img src="diagrams/img/team-access.png" alt="Tree diagram of teams and their repository roles" width="773" height="672" />
+  </a>
+  <figcaption>Child teams inherit the parent's access and can never have less — which is why <code>engineering</code> sits at <code>read</code>.</figcaption>
+</figure>
+<h2 id="enterprise-control-plane">Enterprise control plane</h2>
+<figure class="diagram">
+  <div class="cap">
+    <b>Archify enterprise control plane</b>
+    <span class="kind">architecture</span>
+    <a href="diagrams/system-context.html">Open interactive ↗</a>
+  </div>
+  <a class="frame" href="diagrams/system-context.html">
+    <img src="diagrams/img/system-context.png" alt="Architecture diagram: organization, repository and distribution boundaries" width="1316" height="704" />
+  </a>
+  <figcaption>Three boundaries carry the design: the organization owns identity and approval, the repository only accepts a verified change, distribution ships proven bytes.</figcaption>
+</figure>
+<h2 id="merge-gate">Merge gate</h2>
+<figure class="diagram narrow">
+  <div class="cap">
+    <b>Merge gate — pull request to release</b>
+    <span class="kind">workflow</span>
+    <a href="diagrams/merge-gate.html">Open interactive ↗</a>
+  </div>
+  <a class="frame" href="diagrams/merge-gate.html">
+    <img src="diagrams/img/merge-gate.png" alt="Workflow diagram: verification and security tracks converging on human approval" width="786" height="960" />
+  </a>
+  <figcaption>Verification answers "does this change work"; security answers "is it safe to ship". Neither can be skipped by claiming the other passed.</figcaption>
+</figure>
+<h2 id="release-lifecycle">Release lifecycle</h2>
+<figure class="diagram">
+  <div class="cap">
+    <b>Release lifecycle</b>
+    <span class="kind">lifecycle</span>
+    <a href="diagrams/release-lifecycle.html">Open interactive ↗</a>
+  </div>
+  <a class="frame" href="diagrams/release-lifecycle.html">
+    <img src="diagrams/img/release-lifecycle.png" alt="Lifecycle diagram: release states from tag to attestation" width="1231" height="514" />
+  </a>
+  <figcaption>A bad release is superseded, never rewritten: tags are immutable, and the notifier manifest is what actually protects users.</figcaption>
+</figure>
+<h2 id="release-approval-sequence">Release approval sequence</h2>
+<figure class="diagram">
+  <div class="cap">
+    <b>Release approval sequence</b>
+    <span class="kind">sequence</span>
+    <a href="diagrams/release-approval.html">Open interactive ↗</a>
+  </div>
+  <a class="frame" href="diagrams/release-approval.html">
+    <img src="diagrams/img/release-approval.png" alt="Sequence diagram: tag, approval gate, publication and attestation" width="1120" height="732" />
+  </a>
+  <figcaption>Provenance reads the tagged blob, not the uploaded file, so a swapped asset is rejected instead of silently attested.</figcaption>
+</figure>
+<h2 id="thirty-day-rollout">Thirty-day rollout</h2>
+<figure class="diagram">
+  <div class="cap">
+    <b>Thirty-day rollout</b>
+    <span class="kind">timeline</span>
+    <a href="diagrams/rollout-timeline.html">Open interactive ↗</a>
+  </div>
+  <a class="frame" href="diagrams/rollout-timeline.html">
+    <img src="diagrams/img/rollout-timeline.png" alt="Timeline diagram: thirty-day governance rollout" width="1140" height="835" />
+  </a>
+  <figcaption>Dates are illustrative; the order is the requirement. Rulesets land after the checks they require have reported once.</figcaption>
+</figure>
+    <div class="pagefoot"><a href="deployment-runbook.html"><span class="dir">Previous</span>Runbook</a><span></span></div>
+  </main>
+</div>
+</body>
+</html>

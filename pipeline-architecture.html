@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pipeline architecture · Archify Enterprise operations</title>
+<meta name="description" content="How a commit becomes a published release, gate by gate." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar">
+  <div class="brand">Archify <small>Enterprise operations</small></div>
+  <nav aria-label="Site">
+    <a href="index.html">Overview</a>
+    <a href="team-access.html">Team access</a>
+    <a href="deployment-runbook.html">Runbook</a>
+    <a href="diagrams.html">Diagrams</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="Contents">
+    <h2>Start</h2><ol><li><a href="index.html">Overview</a></li></ol><h2>Access</h2><ol><li><a href="team-access.html">Team access</a></li></ol><h2>Delivery</h2><ol><li><a href="pipeline-architecture.html" class="active">Pipeline</a></li></ol><h2>Controls</h2><ol><li><a href="security-controls.html">Security controls</a></li><li><a href="agent-governance.html">Agent governance</a></li></ol><h2>Operations</h2><ol><li><a href="deployment-runbook.html">Runbook</a></li></ol><h2>Reference</h2><ol><li><a href="diagrams.html">Diagrams</a></li></ol>
+    <h2>On this page</h2><div class="toc"><a class="lvl2" href="#what-the-repository-ships">What the repository ships</a><a class="lvl2" href="#the-whole-path">The whole path</a><a class="lvl2" href="#job-inventory">Job inventory</a><a class="lvl3" href="#verification-githubworkflowsciyml">Verification — `.github/workflows/ci.yml`</a><a class="lvl3" href="#security-githubworkflowssecurityyml">Security — `.github/workflows/security.yml`</a><a class="lvl3" href="#delivery">Delivery</a><a class="lvl2" href="#promotion-path">Promotion path</a><a class="lvl2" href="#environment-and-secret-placement">Environment and secret placement</a><a class="lvl2" href="#token-permissions">Token permissions</a><a class="lvl2" href="#artifacts-and-retention">Artifacts and retention</a><a class="lvl2" href="#what-is-deliberately-absent">What is deliberately absent</a></div>
+  </aside>
+  <main id="content">
+    <h1 id="pipeline-architecture">Pipeline architecture</h1>
+<p>How a change moves from a branch to a published release and a live website, which gate blocks it at each step, and what each gate is actually proving. The canonical rules for contributors live in <a href="https://github.com/zyetaone/archify/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>; this document is the operator's map.</p>
+<p>Rendered version with diagrams: <a href="index.html"><code>index.html</code></a>. The diagram sources are in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/diagrams"><code>../diagrams/</code></a> and are built by <code>node enterprise/diagrams/build.mjs</code>.</p>
+<h2 id="what-the-repository-ships">What the repository ships</h2>
+<div class="table-wrap"><table><thead><tr><th>Artifact</th><th>Built by</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>archify.zip</code> (the skill)</td><td><code>scripts/build-zip.sh</code></td><td>Skills CLI, <code>npx skills add</code>, DSH, agents</td></tr><tr><td>GitHub Release + asset</td><td><code>release.yml</code> on <code>v*</code></td><td>The update notifier and manual downloads</td></tr><tr><td><code>docs/skill-updates/.../stable.json</code></td><td>A follow-up commit</td><td>The notifier's version check</td></tr><tr><td>Static website (<code>website/dist</code>)</td><td><code>website</code> job, Astro</td><td>GitHub Pages, Cloudflare Pages</td></tr><tr><td>SBOM + provenance attestation</td><td><code>security.yml</code>, <code>provenance.yml</code></td><td>Auditors, <code>gh attestation verify</code></td></tr></tbody></table></div>
+<p>The skill has <strong>no runtime dependencies</strong>. That is a supply-chain property, not an accident, and <code>security.yml</code> fails if someone adds one.</p>
+<h2 id="the-whole-path">The whole path</h2>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph authoring["Authoring"]
+    A[feature branch] --&gt;|pull request| B[PR opened]
+  end
+
+  subgraph gates["Required gates on the PR"]
+    B --&gt; C[scope classifier&lt;br/&gt;scripts/ci-scope.mjs]
+    C --&gt;|docs| D[docs checks]
+    C --&gt;|core| E[test 18/20/24 · test 22 · affected suites]
+    C --&gt;|full| F[full regression shards · browser · webm · package · windows]
+    B --&gt; G[security gates&lt;br/&gt;pins · codeql · dependency review · sbom · lint]
+    B --&gt; H[website build + browser continuity]
+  end
+
+  subgraph merge["Merge control"]
+    D --&gt; I{protect-main ruleset}
+    E --&gt; I
+    F --&gt; I
+    G --&gt; I
+    H --&gt; I
+    I --&gt;|1 approval · CODEOWNERS · last-push approval&lt;br/&gt;required contexts green · no agent bypass| J[dev]
+  end
+
+  subgraph promote["Promotion"]
+    J --&gt;|trial use on real diagram tasks| K[PR dev → main]
+    K --&gt; L[main]
+  end
+
+  subgraph publish["Publication"]
+    L --&gt;|tag v*| M[release.yml&lt;br/&gt;environment: production]
+    M --&gt;|reviewer approves| N[GitHub Release + archify.zip]
+    N --&gt; O[provenance.yml&lt;br/&gt;SHA256SUMS + attestation + SBOM]
+    L --&gt; P[deploy-pages / deploy-cloudflare]
+  end</code></pre>
+<h2 id="job-inventory">Job inventory</h2>
+<p>Everything below is real today. "Blocks merge" means the check is in the <code>protect-main</code> required set and a failure stops the pull request.</p>
+<h3 id="verification-githubworkflowsciyml">Verification — <code>.github/workflows/ci.yml</code></h3>
+<div class="table-wrap"><table><thead><tr><th>Job</th><th>Scope gate</th><th>Blocks merge</th><th>Proves</th></tr></thead><tbody><tr><td><code>scope</code></td><td>always</td><td>indirectly</td><td>Which coverage this change needs. Fails closed on an unclassifiable diff.</td></tr><tr><td><code>test (18)</code> <code>test (20)</code> <code>test (24)</code></td><td>not docs</td><td>yes</td><td>The public CLI contract on every supported Node runtime.</td></tr><tr><td><code>test (22)</code> (<code>canonical-test</code>)</td><td>not docs</td><td>yes</td><td>Canonical runtime: core contracts, affected suites, goldens when generated output moved.</td></tr><tr><td><code>full-regression (1|2)</code></td><td><code>full</code> only</td><td>via <code>test (22)</code></td><td>Complete regression, split in two shards; runs once for renderer, viewer, dependency and workflow changes.</td></tr><tr><td><code>browser-regression (1|2)</code></td><td><code>browser</code> gate</td><td>via <code>webm-artifact</code></td><td>Real Chrome: rendered output and interaction, not source assertions.</td></tr><tr><td><code>webm-decode</code></td><td><code>webm</code> gate</td><td>via <code>webm-artifact</code></td><td>A motion export contains distinct decoded frames, not a static still.</td></tr><tr><td><code>webm-artifact</code></td><td>always</td><td>yes</td><td>Aggregates the browser and WebM gates into one always-present check.</td></tr><tr><td><code>zip-freshness</code></td><td><code>package</code> gate</td><td>yes</td><td>Committed <code>archify.zip</code> is the byte-identical deterministic build.</td></tr><tr><td><code>published-update-manifest</code></td><td><code>manifest</code> gate</td><td>yes</td><td><code>stable.json</code> points at a real, published, byte-matching Release.</td></tr><tr><td><code>package smoke (ubuntu|macos|windows)</code></td><td><code>package</code> gate</td><td>yes</td><td>The packaged skill installs and validates on three platforms.</td></tr><tr><td><code>Windows test portability (Node 22|24)</code></td><td><code>windows</code> gate</td><td>yes</td><td>Path, 8.3-name and delivery-lock behaviour under real Windows paths.</td></tr><tr><td><code>website</code></td><td><code>website</code> gate</td><td>no (conditional)</td><td>Astro typecheck, build, browser continuity, Cloudflare output contract.</td></tr></tbody></table></div>
+<p>Two design decisions are worth keeping in mind when you change a job name:</p>
+<ol><li><strong>Aggregator jobs exist so a required check is always present.</strong> <code>webm-artifact</code> is required; the two jobs it aggregates are conditional. A required check that is <em>skipped</em> leaves a pull request permanently pending, so the aggregate always runs and fails when a dependency failed or was skipped unexpectedly.</li><li><strong>The classifier is allowed to ask for more, never less.</strong> An empty diff, an unknown path or an unavailable comparison base all select full coverage. A failed classification cannot become a successful skip.</li></ol>
+<h3 id="security-githubworkflowssecurityyml">Security — <code>.github/workflows/security.yml</code></h3>
+<div class="table-wrap"><table><thead><tr><th>Job</th><th>Trigger</th><th>Blocks merge</th><th>Proves</th></tr></thead><tbody><tr><td><code>security / action pins</code></td><td>PR, push, weekly</td><td>yes</td><td>Every remote action is a 40-character commit SHA, and the repo's own pinning contract passes.</td></tr><tr><td><code>security / codeql</code></td><td>PR (same-repo), push, weekly</td><td>no — enforced by the <code>code_scanning</code> ruleset rule instead</td><td>Static analysis with <code>security-extended</code> queries. Not required directly because fork PRs cannot upload results; the ruleset blocks a merge on a high-severity alert regardless of author.</td></tr><tr><td><code>security / dependency review</code></td><td>PR</td><td>yes</td><td>A new dependency with a known advisory or an incompatible licence never reaches <code>main</code>.</td></tr><tr><td><code>security / sbom (root|archify|website)</code></td><td>PR, push</td><td>yes</td><td>A CycloneDX SBOM exists for each package root; the shipped skill still declares zero runtime dependencies.</td></tr><tr><td><code>security / workflow lint</code></td><td>PR, push</td><td>yes</td><td><code>actionlint</code> plus the repository's own workflow contracts (<code>ci-scope</code>, Cloudflare, compatibility).</td></tr></tbody></table></div>
+<h3 id="delivery">Delivery</h3>
+<div class="table-wrap"><table><thead><tr><th>Workflow</th><th>Trigger</th><th>Gate</th></tr></thead><tbody><tr><td><code>ci.yml</code> → <code>deploy-pages</code></td><td>push to <code>main</code>, all gates green</td><td>GitHub Pages, environment <code>github-pages</code>, obsolete-run rejection by comparing <code>main</code> HEAD.</td></tr><tr><td><code>ci.yml</code> → <code>deploy-cloudflare</code></td><td>push to <code>main</code>, <code>vars.CLOUDFLARE_PAGES_PROJECT</code> set</td><td>Cloudflare Pages, environment <code>cloudflare-pages</code>, production branch only.</td></tr><tr><td><code>release.yml</code></td><td>push of a <code>v*</code> tag</td><td>Environment <code>production</code> (platform reviewer), version/tag match, full suite, deterministic archive, annotated tag for stable.</td></tr><tr><td><code>provenance.yml</code></td><td>release published</td><td>SHA-256 sums, build provenance attestation, SBOM asset. Never rebuilds.</td></tr><tr><td><code>preview.yml</code></td><td>PR touching <code>website/**</code></td><td>Non-production Cloudflare preview branch <code>pr-&lt;n&gt;</code>, same-repo PRs only.</td></tr><tr><td><code>governance.yml</code></td><td>daily, and on governance changes</td><td>Read-only drift report against <code>enterprise/governance/</code>.</td></tr><tr><td><code>dsh.yml</code></td><td>PR/push touching the DSH integration</td><td>The independently versioned plugin contract.</td></tr><tr><td><code>contributor-cards.yml</code></td><td>PR, and merged PR via <code>pull_request_target</code></td><td>Card rendering. The privileged run checks out the default branch only and never executes PR code.</td></tr></tbody></table></div>
+<h2 id="promotion-path">Promotion path</h2>
+<p><code>dev</code> is the integration branch, <code>main</code> is stable. A change lands on <code>dev</code>, gets used on real diagram tasks, and is promoted to <code>main</code> in a separate pull request that records the tested revision and any unresolved issue. Passing CI is not trial-use acceptance; <code>CONTRIBUTING.md</code> owns that distinction and this pipeline does not try to encode it.</p>
+<p>Publication is a tag on <code>main</code>, not a merge. That separation is why a rollback is cheap: the site can be reverted with a commit, a release can be superseded with a new tag, and neither requires unpicking a deploy pipeline.</p>
+<h2 id="environment-and-secret-placement">Environment and secret placement</h2>
+<div class="table-wrap"><table><thead><tr><th>Environment</th><th>Used by</th><th>Protection</th><th>Holds</th></tr></thead><tbody><tr><td><code>production</code></td><td><code>release.yml</code> release job</td><td>Required reviewers (platform team), no self-review, tag policy <code>v*</code></td><td>Nothing — publication uses <code>GITHUB_TOKEN</code></td></tr><tr><td><code>cloudflare-pages</code></td><td><code>ci.yml</code> deploy-cloudflare</td><td>Reviewer (platform), branch <code>main</code></td><td><code>CLOUDFLARE_API_TOKEN</code></td></tr><tr><td><code>github-pages</code></td><td><code>ci.yml</code> deploy-pages</td><td>Branch <code>main</code> only</td><td>Nothing</td></tr><tr><td><code>preview</code></td><td><code>preview.yml</code></td><td>None (non-production)</td><td><code>CLOUDFLARE_API_TOKEN</code></td></tr></tbody></table></div>
+<p>A pull request never sees a production secret: environment secrets are only released to a job that declares the environment, and no <code>pull_request</code> job here declares one. That is also why preview uses its own environment rather than borrowing the production one.</p>
+<h2 id="token-permissions">Token permissions</h2>
+<ul><li>Every workflow declares a top-level <code>permissions:</code> block, defaulting to <code>contents: read</code>. A job opts in to more (<code>pages: write</code>, <code>security-events: write</code>, <code>contents: write</code> for a release) only where it needs it.</li><li>No workflow uses <code>permissions: write-all</code>.</li><li><code>persist-credentials: false</code> is set on checkouts that do not need to push.</li></ul>
+<h2 id="artifacts-and-retention">Artifacts and retention</h2>
+<div class="table-wrap"><table><thead><tr><th>Artifact</th><th>Producer</th><th>Retention</th><th>Purpose</th></tr></thead><tbody><tr><td><code>website-dist</code>, <code>website-cloudflare-dist</code></td><td><code>website</code> job</td><td>90 days</td><td>The exact bytes Pages and Cloudflare deploy.</td></tr><tr><td><code>website-homepage-evidence</code></td><td><code>website</code> job</td><td>90 days</td><td>Visual evidence for a website review.</td></tr><tr><td><code>sbom-*</code></td><td><code>security.yml</code></td><td>90 days</td><td>Per-root CycloneDX documents.</td></tr><tr><td><code>governance-drift-report</code></td><td><code>governance.yml</code></td><td>90 days</td><td>What drifted, and when it was last checked.</td></tr><tr><td><code>SHA256SUMS.txt</code>, <code>*.cdx.json</code></td><td><code>provenance.yml</code></td><td>Release lifetime</td><td>Verifiable with the release.</td></tr></tbody></table></div>
+<h2 id="what-is-deliberately-absent">What is deliberately absent</h2>
+<ul><li><strong>No merge queue.</strong> The ruleset's <code>strict_required_status_checks_policy</code> already requires an up-to-date branch; a queue would add a second, weaker truth.</li><li><strong>No self-hosted runners.</strong> Nothing here needs one, and a self-hosted runner on a public repository is a standing invitation.</li><li><strong>No auto-merge.</strong> <code>repository.json</code> disables it, so no bot or agent can arm a merge and let it complete unattended.</li><li><strong>No second release pipeline.</strong> <code>provenance.yml</code> describes published bytes; it never builds or uploads <code>archify.zip</code>. <code>CONTRIBUTING.md</code> is explicit that the existing release gates are reused rather than duplicated.</li><li><strong>No deploy from a pull request.</strong> Previews publish to a preview branch; the production branch is only reachable from <code>main</code> after every gate.</li></ul>
+    <div class="pagefoot"><a href="team-access.html"><span class="dir">Previous</span>Team access</a><a class="next" href="security-controls.html"><span class="dir">Next</span>Security controls</a></div>
+  </main>
+</div>
+</body>
+</html>

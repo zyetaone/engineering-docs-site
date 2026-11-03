@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deployment runbook · Archify Enterprise operations</title>
+<meta name="description" content="Setup phases, release procedure, rollback, incident and day-2 cadence." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar">
+  <div class="brand">Archify <small>Enterprise operations</small></div>
+  <nav aria-label="Site">
+    <a href="index.html">Overview</a>
+    <a href="team-access.html">Team access</a>
+    <a href="deployment-runbook.html">Runbook</a>
+    <a href="diagrams.html">Diagrams</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="Contents">
+    <h2>Start</h2><ol><li><a href="index.html">Overview</a></li></ol><h2>Access</h2><ol><li><a href="team-access.html">Team access</a></li></ol><h2>Delivery</h2><ol><li><a href="pipeline-architecture.html">Pipeline</a></li></ol><h2>Controls</h2><ol><li><a href="security-controls.html">Security controls</a></li><li><a href="agent-governance.html">Agent governance</a></li></ol><h2>Operations</h2><ol><li><a href="deployment-runbook.html" class="active">Runbook</a></li></ol><h2>Reference</h2><ol><li><a href="diagrams.html">Diagrams</a></li></ol>
+    <h2>On this page</h2><div class="toc"><a class="lvl2" href="#phase-0-preflight">Phase 0 — Preflight</a><a class="lvl3" href="#01-confirm-the-plan">0.1 Confirm the plan</a><a class="lvl3" href="#02-name-the-owners">0.2 Name the owners</a><a class="lvl3" href="#03-prepare-the-operator-machine">0.3 Prepare the operator machine</a><a class="lvl3" href="#04-pin-the-action-shas">0.4 Pin the action SHAs</a><a class="lvl3" href="#05-take-a-baseline">0.5 Take a baseline</a><a class="lvl2" href="#phase-1-foundation">Phase 1 — Foundation</a><a class="lvl3" href="#11-apply-the-org-settings">1.1 Apply the org settings</a><a class="lvl3" href="#12-warn-people-before-2fa-is-enforced">1.2 Warn people before 2FA is enforced</a><a class="lvl3" href="#13-ui-only-member-privileges">1.3 UI-only member privileges</a><a class="lvl3" href="#14-verified-domain-and-profile">1.4 Verified domain and profile</a><a class="lvl2" href="#phase-2-teams-and-repository-standards">Phase 2 — Teams and repository standards</a><a class="lvl3" href="#21-create-the-teams">2.1 Create the teams</a><a class="lvl3" href="#22-add-people-to-teams-not-repositories">2.2 Add people to teams, not repositories</a><a class="lvl3" href="#23-repository-standards">2.3 Repository standards</a><a class="lvl2" href="#phase-3-protect-the-main-branch">Phase 3 — Protect the main branch</a><a class="lvl3" href="#30-the-ordering-constraint">3.0 The ordering constraint</a><a class="lvl3" href="#31-apply-the-rulesets">3.1 Apply the rulesets</a><a class="lvl3" href="#32-raise-the-approval-count-where-it-matters">3.2 Raise the approval count where it matters</a><a class="lvl3" href="#33-codeowners">3.3 CODEOWNERS</a><a class="lvl2" href="#phase-4-security-scanning-and-secrets">Phase 4 — Security scanning and secrets</a><a class="lvl3" href="#41-repository-level-scanning">4.1 Repository-level scanning</a><a class="lvl3" href="#42-code-scanning">4.2 Code scanning</a><a class="lvl3" href="#43-dependency-updates">4.3 Dependency updates</a><a class="lvl3" href="#44-who-reviews-alerts">4.4 Who reviews alerts</a><a class="lvl2" href="#phase-5-automation-and-deploys">Phase 5 — Automation and deploys</a><a class="lvl3" href="#51-org-actions-policy">5.1 Org Actions policy</a><a class="lvl3" href="#52-environments">5.2 Environments</a><a class="lvl3" href="#53-secrets-and-variables">5.3 Secrets and variables</a><a class="lvl3" href="#54-required-checks">5.4 Required checks</a><a class="lvl3" href="#55-first-full-run">5.5 First full run</a><a class="lvl2" href="#phase-6-ai-agents">Phase 6 — AI agents</a><a class="lvl3" href="#61-enterprise-ai-controls-enterprise-cloud">6.1 Enterprise AI controls (Enterprise Cloud)</a><a class="lvl3" href="#62-guardrails">6.2 Guardrails</a><a class="lvl3" href="#63-register-before-installing">6.3 Register before installing</a><a class="lvl3" href="#64-approved-custom-agents">6.4 Approved custom agents</a><a class="lvl2" href="#phase-7-oversight-and-spending">Phase 7 — Oversight and spending</a><a class="lvl3" href="#71-spending-limits">7.1 Spending limits</a><a class="lvl3" href="#72-audit-log">7.2 Audit log</a><a class="lvl3" href="#73-drift">7.3 Drift</a><a class="lvl3" href="#74-recurring-reviews">7.4 Recurring reviews</a><a class="lvl2" href="#phase-8-company-login-later">Phase 8 — Company login (later)</a><a class="lvl2" href="#routine-operations">Routine operations</a><a class="lvl3" href="#cut-a-release">Cut a release</a><a class="lvl3" href="#deploy-the-website">Deploy the website</a><a class="lvl3" href="#preview-a-website-change">Preview a website change</a><a class="lvl3" href="#hotfix">Hotfix</a><a class="lvl2" href="#rollback">Rollback</a><a class="lvl3" href="#roll-back-a-release">Roll back a release</a><a class="lvl3" href="#roll-back-the-website">Roll back the website</a><a class="lvl3" href="#roll-back-a-configuration-change">Roll back a configuration change</a><a class="lvl2" href="#incident-response">Incident response</a><a class="lvl3" href="#contain">Contain</a><a class="lvl3" href="#preserve-evidence">Preserve evidence</a><a class="lvl3" href="#recover">Recover</a><a class="lvl2" href="#day-2-calendar">Day-2 calendar</a><a class="lvl3" href="#offboarding-a-person">Offboarding a person</a><a class="lvl2" href="#when-a-gate-is-red">When a gate is red</a><a class="lvl2" href="#appendix-a-command-reference">Appendix A — Command reference</a><a class="lvl2" href="#appendix-b-phase-record-template">Appendix B — Phase record template</a><a class="lvl2" href="#appendix-c-decision-log">Appendix C — Decision log</a></div>
+  </aside>
+  <main id="content">
+    <h1 id="deployment-runbook">Deployment runbook</h1>
+<p>The operator's document: how to stand this repository up in an organization, how to ship a release, how to deploy the website, and what to do when something goes wrong.</p>
+<p>Work top to bottom the first time. After that, jump to <a href="#routine-operations">Routine operations</a> or <a href="#rollback">Rollback</a>.</p>
+<p><strong>Ownership.</strong> One named person owns this runbook and ticks the boxes. Owners are listed in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/teams.yaml"><code>../governance/teams.yaml</code></a>. If nobody owns it, it is not a control.</p>
+<p><strong>Evidence rule.</strong> A step is complete when there is a command output, a run link, or a screenshot recorded in the phase record — not when the setting looked right. Every phase ends with an <em>Evidence</em> line for exactly that reason.</p>
+<hr />
+<h2 id="phase-0-preflight">Phase 0 — Preflight</h2>
+<p><strong>Goal:</strong> know what you have before you change it. <strong>Owner:</strong> engineering lead. <strong>Time:</strong> 30 minutes.</p>
+<h3 id="01-confirm-the-plan">0.1 Confirm the plan</h3>
+<p>SSO, SCIM, enterprise AI controls and audit streaming exist only on <strong>GitHub Enterprise Cloud</strong>. On Free or Team those toggles either do not appear or do nothing.</p>
+<pre><code class="language-sh">gh api orgs/&lt;org&gt; --jq '{plan: .plan.name, seats: .plan.filled_seats}'</code></pre>
+<p>If the answer is <code>free</code> or <code>team</code>, read <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/org.json"><code>../governance/org.json</code></a> <code>.plan_requirements</code> before promising anyone a control you cannot enable. A trial is available from the org's billing page.</p>
+<h3 id="02-name-the-owners">0.2 Name the owners</h3>
+<p>Two or three, one of them the engineering lead. Owners can change everything, so the list stays short. Record them in <code>teams.yaml</code> → <code>owners</code>.</p>
+<pre><code class="language-sh">gh api orgs/&lt;org&gt;/members?role=admin --jq '.[].login'</code></pre>
+<h3 id="03-prepare-the-operator-machine">0.3 Prepare the operator machine</h3>
+<pre><code class="language-sh">gh auth status                                   # authenticated, with admin:org
+gh auth refresh -s admin:org,repo,read:org       # add scopes if needed
+command -v jq node npm                           # all required
+npm ci &amp;&amp; npm --prefix archify ci                # repository test dependencies</code></pre>
+<h3 id="04-pin-the-action-shas">0.4 Pin the action SHAs</h3>
+<p>The security workflows ship with readable versions and a <code>PIN-TODO</code> marker. CI fails until they are pinned (<code>security / action pins</code>).</p>
+<pre><code class="language-sh">enterprise/governance/pin-actions.sh --dry-run
+enterprise/governance/pin-actions.sh
+git diff --stat .github/workflows</code></pre>
+<h3 id="05-take-a-baseline">0.5 Take a baseline</h3>
+<pre><code class="language-sh">enterprise/governance/verify.sh --org &lt;org&gt; --repo &lt;org&gt;/archify --report baseline.md || true</code></pre>
+<p>Keep <code>baseline.md</code>. It is what "drift" is measured against on day 30.</p>
+<p><strong>Evidence:</strong> plan name, owner list, <code>baseline.md</code>, pinned-SHA diff.</p>
+<hr />
+<h2 id="phase-1-foundation">Phase 1 — Foundation</h2>
+<p><strong>Goal:</strong> lock the doors before anyone moves in. <strong>Owner:</strong> security lead. <strong>Time:</strong> 45 minutes.</p>
+<h3 id="11-apply-the-org-settings">1.1 Apply the org settings</h3>
+<pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope org --dry-run   # read the requests
+enterprise/governance/apply.sh --org &lt;org&gt; --scope org</code></pre>
+<p>This sets: default repository permission <code>none</code>, private-repo creation only, forking of private repositories off, member-created Pages off, mandatory 2FA, sign-off on web commits, and scanning defaults for new repositories.</p>
+<h3 id="12-warn-people-before-2fa-is-enforced">1.2 Warn people before 2FA is enforced</h3>
+<p>Anyone without 2FA is removed from the org when the setting turns on. Announce it a few days ahead, then confirm:</p>
+<pre><code class="language-sh">gh api orgs/&lt;org&gt; --jq .two_factor_requirement_enabled   # true</code></pre>
+<h3 id="13-ui-only-member-privileges">1.3 UI-only member privileges</h3>
+<p>These are in <code>org.json</code> → <code>.manual</code> because the REST API does not expose them on every plan. Do them by hand: <strong>Org Settings → Member privileges</strong>.</p>
+<ul><li>[ ] Members cannot delete repositories</li><li>[ ] Members cannot transfer repositories</li><li>[ ] Members cannot change repository visibility</li><li>[ ] Members cannot invite outside collaborators</li><li>[ ] Repository creation: private only</li><li>[ ] Forking of private repositories: off</li></ul>
+<h3 id="14-verified-domain-and-profile">1.4 Verified domain and profile</h3>
+<ul><li>[ ] Add the company domain under <strong>Settings → Verified and approved domains</strong></li><li>[ ] Org profile has a description and a security contact address</li></ul>
+<p><strong>Verify:</strong></p>
+<pre><code class="language-sh">enterprise/governance/verify.sh --org &lt;org&gt; --repo &lt;org&gt;/archify | sed -n '/Organization/,/Team access/p'</code></pre>
+<p><strong>Rollback:</strong> re-run <code>apply.sh</code> with the previous <code>org.json</code>, or set the two or three changed fields by hand. Nothing in this phase is destructive.</p>
+<p><strong>Evidence:</strong> <code>verify.sh</code> output for the Organization section, screenshot of Member privileges, domain verification badge.</p>
+<hr />
+<h2 id="phase-2-teams-and-repository-standards">Phase 2 — Teams and repository standards</h2>
+<p><strong>Goal:</strong> access flows through teams, never through individual people. <strong>Owner:</strong> platform lead. <strong>Time:</strong> 30 minutes.</p>
+<h3 id="21-create-the-teams">2.1 Create the teams</h3>
+<pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope org</code></pre>
+<p>Creates <code>org-admins</code>, <code>engineering</code> (parent), <code>platform</code>, <code>security</code>, <code>ai-agents</code>, then sets each team's permission on this repository:</p>
+<div class="table-wrap"><table><thead><tr><th>Team</th><th>Permission on <code>archify</code></th><th>Holds</th></tr></thead><tbody><tr><td><code>org-admins</code></td><td>admin</td><td>2–3 owners</td></tr><tr><td><code>engineering</code></td><td>read</td><td>everyone in engineering, via sub-teams</td></tr><tr><td><code>platform</code></td><td>maintain</td><td>CI, deploys, environment approvals</td></tr><tr><td><code>security</code></td><td>write</td><td>alert triage, security review — <strong>write, because approval requires write</strong></td></tr><tr><td><code>ai-agents</code></td><td>write</td><td><strong>no people</strong> — GitHub App installations only</td></tr></tbody></table></div>
+<p>Role semantics, personas and the traps that cost an afternoon each: <a href="team-access.html"><code>team-access.md</code></a>. The one line to remember: a <code>read</code> member can comment on a pull request but their approval does <strong>not</strong> satisfy the ruleset.</p>
+<h3 id="22-add-people-to-teams-not-repositories">2.2 Add people to teams, not repositories</h3>
+<pre><code class="language-sh">gh api -X PUT orgs/&lt;org&gt;/teams/&lt;slug&gt;/memberships/&lt;login&gt; -f role=member</code></pre>
+<p>Never add a person to a repository directly. When they leave a team, their access to every repository that team can see disappears with it.</p>
+<h3 id="23-repository-standards">2.3 Repository standards</h3>
+<ul><li>[ ] Default visibility for new repositories: <strong>private</strong> (Settings → Repository)</li><li>[ ] <code>.github</code> repository holds <code>CONTRIBUTING.md</code>, <code>SECURITY.md</code> and PR templates</li><li>[ ] <code>template-service</code> exists with README, <code>.gitignore</code>, <code>LICENSE</code>, <code>CODEOWNERS</code>, and is marked as a template</li><li>[ ] Naming pattern agreed: <code>team-product-purpose</code> (<code>backend-billing-api</code>)</li></ul>
+<p><strong>Verify:</strong></p>
+<pre><code class="language-sh">gh api orgs/&lt;org&gt;/teams --jq '.[].slug'
+gh api orgs/&lt;org&gt;/teams/ai-agents/repos/&lt;org&gt;/archify --jq .permission   # write
+gh api orgs/&lt;org&gt;/teams/ai-agents/members --jq 'length'                  # 0</code></pre>
+<p><strong>Rollback:</strong> delete a team with <code>gh api -X DELETE orgs/&lt;org&gt;/teams/&lt;slug&gt;</code>. Doing so removes its access, so check nothing depends on it first.</p>
+<p><strong>Evidence:</strong> team list, <code>ai-agents</code> permission and empty member list.</p>
+<hr />
+<h2 id="phase-3-protect-the-main-branch">Phase 3 — Protect the main branch</h2>
+<p><strong>Goal:</strong> nothing reaches <code>main</code> without a pull request and a human approval. <strong>Owner:</strong> platform lead. <strong>Time:</strong> 30 minutes. <strong>Do not skip.</strong></p>
+<h3 id="30-the-ordering-constraint">3.0 The ordering constraint</h3>
+<p>Apply this phase <strong>after</strong> <code>ci.yml</code> and <code>security.yml</code> have run at least once on the default branch. A required context that has never reported leaves every pull request pending forever.</p>
+<pre><code class="language-sh"># Has CI run on main yet?
+gh run list --branch main --limit 5
+# Which check names actually exist?
+gh api "repos/&lt;org&gt;/archify/commits/main/check-runs?per_page=100" --jq '[.check_runs[].name] | unique'</code></pre>
+<p>Compare that list with <code>required_status_checks</code> in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/rulesets/protect-main.json"><code>../governance/rulesets/protect-main.json</code></a>. If a context is missing, fix the job name in the workflow or remove the context from the file. Do not remove it to "get unblocked" without recording why.</p>
+<h3 id="31-apply-the-rulesets">3.1 Apply the rulesets</h3>
+<pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope org
+enterprise/governance/apply.sh --org &lt;org&gt; --scope org --verify-checks</code></pre>
+<p><code>protect-main</code> gives you:</p>
+<ul><li>Restrict deletions, block force pushes</li><li>Pull request required, 1 approval, stale approvals dismissed</li><li>Review from Code Owners, and approval of the most recent push by someone else</li><li>Required status checks, branch must be up to date</li><li>Conversation resolution required</li><li>CodeQL must report no high-or-higher alert</li><li>Bypass: <code>OrganizationAdmin</code> only — <strong>never</strong> an agent, bot or repository role</li></ul>
+<p><code>protect-release-tags</code> makes <code>v*</code> tags immutable and restricts creation to org admins, because a moved tag is a forged release.</p>
+<h3 id="32-raise-the-approval-count-where-it-matters">3.2 Raise the approval count where it matters</h3>
+<p>Payment, auth and infra repositories get 2 approvals. For this repository, 1 is the floor; raise <code>required_approving_review_count</code> in <code>protect-main.json</code> and re-apply if the risk changes.</p>
+<h3 id="33-codeowners">3.3 CODEOWNERS</h3>
+<p><code>.github/CODEOWNERS</code> already names the owner for <code>.github/**</code> and <code>enterprise/**</code>. Those paths cannot be changed without a Code Owner's approval, which is how path-level write restriction is expressed — GitHub rulesets cannot match file paths.</p>
+<p><strong>Verify:</strong></p>
+<pre><code class="language-sh">enterprise/governance/verify.sh --org &lt;org&gt; --repo &lt;org&gt;/archify | sed -n '/Rulesets/,/Environments/p'</code></pre>
+<p><strong>Rollback:</strong> set <code>enforcement</code> to <code>disabled</code> in the ruleset JSON and re-apply, or delete the ruleset in the UI. <code>evaluate</code> (log-only) is a GitHub <strong>Enterprise</strong> feature and does not exist on Team. Do not remove the bypass actor as a "fix" — that is the control.</p>
+<p><strong>Evidence:</strong> <code>verify.sh</code> Rulesets section showing <code>active</code> and the exact context list, plus one real pull request that was blocked by the ruleset.</p>
+<hr />
+<h2 id="phase-4-security-scanning-and-secrets">Phase 4 — Security scanning and secrets</h2>
+<p><strong>Goal:</strong> every scanner on, and a password never enters the repository. <strong>Owner:</strong> security lead. <strong>Time:</strong> 45 minutes.</p>
+<h3 id="41-repository-level-scanning">4.1 Repository-level scanning</h3>
+<pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope repo</code></pre>
+<p>Turns on secret scanning, push protection, non-provider patterns, validity checks, and private vulnerability reporting.</p>
+<p>On private repositories these need <strong>Secret Protection</strong> and <strong>Code Security</strong>. The API returns <code>200</code> even when the feature is inactive on your plan, so read the response body, do not trust the status code:</p>
+<pre><code class="language-sh">gh api repos/&lt;org&gt;/archify --jq .security_and_analysis</code></pre>
+<h3 id="42-code-scanning">4.2 Code scanning</h3>
+<p><code>security.yml</code> runs CodeQL on every pull request from this repository, on every push to <code>main</code>/<code>dev</code>, and weekly. Fork PRs are analysed post-merge because GitHub does not grant <code>security-events: write</code> to fork workflows — the <code>code_scanning</code> rule in the ruleset still blocks a merge on a high-severity alert.</p>
+<p>Alternatively, use <strong>default setup</strong> (Settings → Code security) and delete the <code>codeql</code> job. Pick one. Running both produces duplicate alerts and confusing counts.</p>
+<h3 id="43-dependency-updates">4.3 Dependency updates</h3>
+<p><code>.github/dependabot.yml</code> covers all three package roots plus Actions, grouped and weekly. Dependabot alerts alone do not patch anything; the update PRs are the patching mechanism.</p>
+<pre><code class="language-sh">gh api repos/&lt;org&gt;/archify/vulnerability-alerts -i | head -1     # 204 = on</code></pre>
+<h3 id="44-who-reviews-alerts">4.4 Who reviews alerts</h3>
+<p>The security team, weekly, in a recorded slot. See <a href="#day-2-calendar">Day-2 calendar</a>.</p>
+<p><strong>Verify:</strong></p>
+<pre><code class="language-sh">enterprise/governance/verify.sh --org &lt;org&gt; --repo &lt;org&gt;/archify | sed -n '/Repository settings/,$p'
+gh api repos/&lt;org&gt;/archify/code-scanning/analyses --jq '.[0] | {tool, created_at}'</code></pre>
+<p><strong>Rollback:</strong> disable a scanner in the UI. Push protection is the last one to turn off — with agents writing code, it matters more, not less.</p>
+<p><strong>Evidence:</strong> <code>security_and_analysis</code> output, first CodeQL analysis link, first Dependabot PR.</p>
+<hr />
+<h2 id="phase-5-automation-and-deploys">Phase 5 — Automation and deploys</h2>
+<p><strong>Goal:</strong> lock down what Actions can run and who can ship. <strong>Owner:</strong> platform lead. <strong>Time:</strong> 60 minutes.</p>
+<h3 id="51-org-actions-policy">5.1 Org Actions policy</h3>
+<p><strong>Org Settings → Actions → General</strong> (UI; record a screenshot):</p>
+<ul><li>[ ] Allow <strong>GitHub-owned and verified creators</strong>, plus actions listed by name</li><li>[ ] Workflow permissions: <strong>read-only</strong> by default</li><li>[ ] Require approval before workflows run from outside contributors</li><li>[ ] <strong>Off</strong>: "Allow GitHub Actions to create and approve pull requests"</li></ul>
+<p>Confirm the default from the API:</p>
+<pre><code class="language-sh">gh api orgs/&lt;org&gt;/actions/permissions/workflow --jq '{default: .default_workflow_permissions, can_approve_prs: .can_approve_pull_request_reviews}'</code></pre>
+<p>Every workflow in this repository already declares a top-level <code>permissions: contents: read</code>, so the org default is a second layer, not the only one.</p>
+<h3 id="52-environments">5.2 Environments</h3>
+<pre><code class="language-sh">enterprise/governance/apply.sh --org &lt;org&gt; --scope repo</code></pre>
+<div class="table-wrap"><table><thead><tr><th>Environment</th><th>Protection</th><th>Used by</th></tr></thead><tbody><tr><td><code>production</code></td><td>platform reviewer, no self-review, tag <code>v*</code> + branch <code>main</code></td><td><code>release.yml</code></td></tr><tr><td><code>cloudflare-pages</code></td><td>platform reviewer, branch <code>main</code></td><td><code>ci.yml</code> deploy-cloudflare</td></tr><tr><td><code>github-pages</code></td><td>branch <code>main</code> only</td><td><code>ci.yml</code> deploy-pages</td></tr><tr><td><code>preview</code></td><td>none (non-production)</td><td><code>preview.yml</code></td></tr></tbody></table></div>
+<blockquote>[object Object]</blockquote>
+<h3 id="53-secrets-and-variables">5.3 Secrets and variables</h3>
+<p>Names and owners are in <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/secrets-inventory.yaml"><code>../governance/secrets-inventory.yaml</code></a>. Values are set by hand and never committed.</p>
+<pre><code class="language-sh"># Cloudflare (production + preview environments)
+gh secret set CLOUDFLARE_API_TOKEN --env cloudflare-pages
+gh secret set CLOUDFLARE_API_TOKEN --env preview
+gh variable set CLOUDFLARE_PAGES_PROJECT --body archify-site
+gh variable set CLOUDFLARE_ACCOUNT_ID --body &lt;32-hex-account-id&gt;
+
+# Governance drift (read-only org administration)
+gh secret set GOVERNANCE_TOKEN
+gh variable set GOVERNANCE_ORG --body &lt;org&gt;</code></pre>
+<p><code>CLOUDFLARE_PAGES_PROJECT</code> empty means both Cloudflare jobs skip. That is the intended way to run without Cloudflare.</p>
+<h3 id="54-required-checks">5.4 Required checks</h3>
+<p>Already applied in Phase 3. If you added or renamed a job, update <code>protect-main.json</code> and re-apply, then run <code>--verify-checks</code>.</p>
+<h3 id="55-first-full-run">5.5 First full run</h3>
+<pre><code class="language-sh">gh workflow run ci.yml
+gh run watch
+gh workflow run security.yml
+gh run watch</code></pre>
+<p>Expect <code>security / action pins</code> to fail until Phase 0.4 is committed.</p>
+<p><strong>Verify:</strong></p>
+<pre><code class="language-sh">gh api repos/&lt;org&gt;/archify/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
+gh secret list --env cloudflare-pages</code></pre>
+<p><strong>Rollback:</strong> an environment with no reviewer is inert, not dangerous — remove the reviewer requirement rather than the environment if a release is stuck, and restore it immediately after.</p>
+<p><strong>Evidence:</strong> Actions policy screenshot, environment list with protection rules, secret names (never values), first green <code>ci.yml</code> and <code>security.yml</code> run links.</p>
+<hr />
+<h2 id="phase-6-ai-agents">Phase 6 — AI agents</h2>
+<p><strong>Goal:</strong> agents get their own identity, the smallest access that works, and no power to merge. <strong>Owner:</strong> AI lead. <strong>Time:</strong> 45 minutes, then a one-month pilot.</p>
+<h3 id="61-enterprise-ai-controls-enterprise-cloud">6.1 Enterprise AI controls (Enterprise Cloud)</h3>
+<p><strong>Enterprise Settings → AI controls</strong>:</p>
+<ul><li>[ ] Agents: enable the approved agents for the pilot org/repos only</li><li>[ ] MCP: allow only approved tool servers — the agent firewall does not cover MCP, so this list is the control</li><li>[ ] Copilot: restrict allowed models, for cost and compliance</li><li>[ ] Delegate AI policy work to the AI lead with a fine-grained role</li></ul>
+<h3 id="62-guardrails">6.2 Guardrails</h3>
+<ul><li>[ ] Copilot → Cloud agent → Internet access: firewall <strong>on</strong>, recommended allowlist, <strong>repository custom rules disabled</strong></li><li>[ ] Agent pull requests require workflow approval (Phase 5.1)</li><li>[ ] Agents are not on any ruleset bypass list</li><li>[ ] Agents hold no production secret and no deploy right</li></ul>
+<h3 id="63-register-before-installing">6.3 Register before installing</h3>
+<p>Add the entry to <a href="https://github.com/zyetaone/archify/blob/main/enterprise/governance/agent-register.yaml"><code>../governance/agent-register.yaml</code></a> first: name, human owner, repos, permissions, approval date, review date. Then follow <a href="agent-governance.html"><code>agent-governance.md</code></a> to create the app and install it on selected repositories only.</p>
+<h3 id="64-approved-custom-agents">6.4 Approved custom agents</h3>
+<p>Define them once in a <code>.github-private</code> repository, and add a ruleset so only <code>org-admins</code> can change files under <code>agents/</code> and <code>.github/agents/</code>.</p>
+<p><strong>Verify:</strong></p>
+<pre><code class="language-sh">gh api orgs/&lt;org&gt;/installations --jq '.[] | {app: .app_slug, selection: .repository_selection}'
+gh api orgs/&lt;org&gt;/teams/ai-agents/repos/&lt;org&gt;/archify --jq .permission   # write, never admin</code></pre>
+<p><strong>Rollback:</strong> uninstall the app (<code>gh api -X DELETE orgs/&lt;org&gt;/installations/&lt;id&gt;</code>). That revokes every token it holds, immediately. Update the register in the same change.</p>
+<p><strong>Evidence:</strong> AI controls screenshots, installation list, register entry, one agent-authored pull request that required a human approval to merge.</p>
+<hr />
+<h2 id="phase-7-oversight-and-spending">Phase 7 — Oversight and spending</h2>
+<p><strong>Goal:</strong> answer "who or what changed this, and what did it cost" at any time. <strong>Owner:</strong> engineering lead + security lead. <strong>Time:</strong> 30 minutes, then recurring.</p>
+<h3 id="71-spending-limits">7.1 Spending limits</h3>
+<p><strong>Billing → spending limits</strong>: set a cap for Actions, Copilot and each paid security product. Agents burn usage fast; a cap converts an incident into a notification.</p>
+<h3 id="72-audit-log">7.2 Audit log</h3>
+<ul><li>[ ] Review monthly: <strong>Org Settings → Logs → Audit log</strong></li><li>[ ] On Enterprise Cloud, stream it to long-term storage</li></ul>
+<p>The audit log <strong>UI</strong> is included in Team. The audit log <strong>API</strong> is not: <code>gh api orgs/&lt;org&gt;/audit-log</code> returns 404 on Team and needs Enterprise. Review in the UI, and export by hand if a record is needed:</p>
+<pre><code class="language-sh"># Enterprise only — expect 404 on Team
+gh api "orgs/&lt;org&gt;/audit-log?per_page=100&amp;phrase=action:repo.change_merge_setting" --jq '.[] | {actor, action, created_at}'</code></pre>
+<h3 id="73-drift">7.3 Drift</h3>
+<p><code>governance.yml</code> runs <code>verify.sh</code> daily and on any change under <code>enterprise/governance/</code>. A red run is a real finding, not noise: either the live state drifted or the desired state in this repository is stale.</p>
+<h3 id="74-recurring-reviews">7.4 Recurring reviews</h3>
+<p>See <a href="#day-2-calendar">Day-2 calendar</a>.</p>
+<p><strong>Evidence:</strong> spending-limit screenshot, first monthly audit review entry, first green <code>governance / drift</code> run.</p>
+<hr />
+<h2 id="phase-8-company-login-later">Phase 8 — Company login (later)</h2>
+<p>Do this when the company adopts Google Workspace, Microsoft Entra or Okta, and the org is on Enterprise Cloud.</p>
+<ul><li>[ ] Connect SAML SSO so access depends on the company login</li><li>[ ] Turn on SCIM so joiners and leavers are handled automatically</li><li>[ ] Decide on Enterprise Managed Users <strong>before</strong> the team grows — switching later means migrating accounts</li></ul>
+<p>Until then, personal GitHub accounts with mandatory 2FA are acceptable. Record the decision and its date so it does not silently become permanent.</p>
+<hr />
+<h2 id="routine-operations">Routine operations</h2>
+<h3 id="cut-a-release">Cut a release</h3>
+<ol><li><strong>Prepare the version.</strong> Bump <code>archify/package.json</code> and <code>archify/skill-release.json</code>; update <code>CHANGELOG.md</code>; rebuild the archive.</li></ol>
+<p>   ``<code>sh    scripts/build-zip.sh archify.zip    npm run test:full    </code>``</p>
+<ol><li><strong>Land it through the normal path.</strong> Pull request to <code>dev</code>, then a promotion PR <code>dev → main</code> that records the tested revision, the real-task evidence, and any unresolved issue. CI is not trial-use acceptance.</li></ol>
+<ol><li><strong>Tag.</strong> Stable releases need an annotated tag, and the tag must match <code>archify/package.json</code>:</li></ol>
+<p>   ``<code>sh    git tag -a v3.3.0 -m "archify 3.3.0"    git push origin v3.3.0    </code>``</p>
+<ol><li><strong>Approve the production gate.</strong> <code>release.yml</code> waits on the <code>production</code> environment. A platform reviewer — not the person who pushed the tag — approves:</li></ol>
+<p>   ``<code>sh    gh run list --workflow release.yml --limit 1    gh api repos/&lt;org&gt;/archify/actions/runs/&lt;run_id&gt;/pending_deployments \      --jq '.[] | {environment: .environment.name, id}'    gh api -X POST repos/&lt;org&gt;/archify/actions/runs/&lt;run_id&gt;/pending_deployments \      -F environment_ids[]=&lt;environment_id&gt; -f state=approved -f comment="Release v3.3.0 approved"    </code>``</p>
+<p>   The job then re-runs the full suite, checks the archive is deterministic, and    publishes the Release with <code>archify.zip</code> attached.</p>
+<ol><li><strong>Publish the update manifest in a follow-up commit.</strong> <code>stable.json</code> must point at the Release that now exists. The <code>published-update-manifest</code> gate verifies the asset, the tagged archive and the digest before the site deploys — that is why the manifest is a separate commit and not part of the tag.</li></ol>
+<ol><li><strong>Confirm provenance.</strong> <code>provenance.yml</code> runs on <code>release: published</code> and attaches <code>SHA256SUMS.txt</code> and a CycloneDX SBOM:</li></ol>
+<p>   ``<code>sh    gh release view v3.3.0 --json assets --jq '.assets[].name'    gh attestation verify archify.zip --repo &lt;org&gt;/archify    </code>``</p>
+<ol><li><strong>Public acceptance.</strong> Install from the advertised path in an isolated environment and confirm the version users actually get. Only then is the channel complete.</li></ol>
+<h3 id="deploy-the-website">Deploy the website</h3>
+<p>Automatic. A push to <code>main</code> deploys GitHub Pages after every required gate, and Cloudflare Pages if <code>CLOUDFLARE_PAGES_PROJECT</code> is set. Both jobs re-check that <code>main</code> still points at the commit they built, and skip themselves as obsolete if it does not.</p>
+<pre><code class="language-sh">gh run list --workflow ci.yml --branch main --limit 3
+gh api repos/&lt;org&gt;/archify/deployments --jq '.[0:5][] | {environment, ref, created_at}'</code></pre>
+<h3 id="preview-a-website-change">Preview a website change</h3>
+<p>Automatic for a same-repo pull request touching <code>website/**</code>. The URL is posted as a comment marked <code>&lt;!-- archify-preview --&gt;</code>, updated in place on each push. Fork PRs are skipped by design.</p>
+<h3 id="hotfix">Hotfix</h3>
+<p>A production defect does not change the rules; it changes the urgency.</p>
+<ol><li>Branch from <code>main</code>, fix, open a pull request.</li><li>One approval is still required. The bypass list is for emergencies only and using it requires a written record in the incident.</li><li>Tag a patch release and follow <em>Cut a release</em> from step 3.</li></ol>
+<hr />
+<h2 id="rollback">Rollback</h2>
+<h3 id="roll-back-a-release">Roll back a release</h3>
+<p>Tags are immutable, so a bad release is superseded, never rewritten.</p>
+<div class="table-wrap"><table><thead><tr><th>Symptom</th><th>Action</th></tr></thead><tbody><tr><td>Broken install for users</td><td>Publish a patch release with the fix. This is the only path that reaches users who already updated.</td></tr><tr><td>Release published by mistake</td><td><code>gh release edit v3.3.0 --prerelease</code> (removes it from "latest"), then publish the correct version.</td></tr><tr><td>Notifier offering a bad version</td><td>Revert the <code>stable.json</code> commit on <code>main</code>. The gated deploy re-verifies and republishes the site; the notifier stops offering it after that deploy.</td></tr><tr><td>Provenance or asset mismatch</td><td>Treat as an incident, not a rollback: the published bytes do not match the tag. See <a href="#incident-response">Incident response</a>.</td></tr></tbody></table></div>
+<h3 id="roll-back-the-website">Roll back the website</h3>
+<ol><li><code>git revert &lt;commit&gt;</code> on <code>main</code> through a pull request (the ruleset still applies).</li><li>The merge triggers a fresh deploy of the reverted build.</li><li>Confirm the live page and the deployment record.</li></ol>
+<p>Re-running an old successful deploy run does <strong>not</strong> work: the obsolete-run guard compares <code>main</code> HEAD with the run's SHA and skips itself. That guard exists so a stale build cannot overwrite a newer one. Use a revert.</p>
+<h3 id="roll-back-a-configuration-change">Roll back a configuration change</h3>
+<pre><code class="language-sh">git checkout &lt;previous-commit&gt; -- enterprise/governance/
+enterprise/governance/apply.sh --org &lt;org&gt; --dry-run
+enterprise/governance/apply.sh --org &lt;org&gt;</code></pre>
+<p>Configuration is data. Rolling it back is a diff and a re-apply, not a UI archaeology exercise.</p>
+<hr />
+<h2 id="incident-response">Incident response</h2>
+<div class="table-wrap"><table><thead><tr><th>Severity</th><th>Example</th><th>Response</th></tr></thead><tbody><tr><td>SEV1</td><td>Published archive does not match its tag; a secret was pushed; an agent merged code</td><td>Contain within 15 minutes, notify owners, rotate credentials</td></tr><tr><td>SEV2</td><td>Required check permanently red; deploy blocked; drift persists after re-apply</td><td>Fix within a business day</td></tr><tr><td>SEV3</td><td>A single scanner noisy; a docs build flaky</td><td>Next scheduled review</td></tr></tbody></table></div>
+<h3 id="contain">Contain</h3>
+<pre><code class="language-sh"># Stop all workflows in the repository.
+gh api -X PUT repos/&lt;org&gt;/archify/actions/permissions -F enabled=false
+
+# Revoke a leaked token or a compromised agent.
+gh api -X DELETE orgs/&lt;org&gt;/installations/&lt;installation_id&gt;
+
+# Rotate a deploy credential.
+gh secret set CLOUDFLARE_API_TOKEN --env cloudflare-pages</code></pre>
+<h3 id="preserve-evidence">Preserve evidence</h3>
+<pre><code class="language-sh"># Audit log API is Enterprise-only; on Team export from Org Settings → Logs instead.
+gh api "orgs/&lt;org&gt;/audit-log?per_page=100" &gt; incident/audit-$(date -u +%Y%m%dT%H%M).json || \
+  echo 'audit-log API unavailable on this plan: capture the UI export by hand' &gt;&amp;2
+gh run list --limit 50 --json databaseId,workflowName,conclusion,headSha,createdAt &gt; incident/runs.json
+gh release view &lt;tag&gt; --json assets,createdAt &gt; incident/release.json</code></pre>
+<p>Do not delete a bad release or a workflow run before this is captured. Deleting the evidence is how a small problem becomes an unattributable one.</p>
+<h3 id="recover">Recover</h3>
+<ol><li>Rotate every credential the actor could read. Rotate first, investigate second.</li><li>Fix forward through the normal pull-request path.</li><li>Re-enable Actions only after the fix is merged.</li><li>Write the record: timeline, root cause, the control that should have caught it, and the change to <code>enterprise/governance/</code> that closes it. If no file changes, the incident is not closed.</li></ol>
+<hr />
+<h2 id="day-2-calendar">Day-2 calendar</h2>
+<div class="table-wrap"><table><thead><tr><th>Cadence</th><th>Task</th><th>Owner</th><th>Where</th></tr></thead><tbody><tr><td>Daily</td><td><code>governance / drift</code> result</td><td>platform</td><td>Actions</td></tr><tr><td>Weekly</td><td>Alert triage: CodeQL, secret scanning, Dependabot</td><td>security</td><td>Security tab</td></tr><tr><td>Weekly</td><td>Dependabot PRs reviewed and merged</td><td>platform</td><td>Pull requests</td></tr><tr><td>Monthly</td><td>Audit log review</td><td>security</td><td>Org Settings → Logs</td></tr><tr><td>Monthly</td><td>Spend against limits</td><td>eng lead</td><td>Billing</td></tr><tr><td>Quarterly</td><td>Team membership review</td><td>security</td><td><code>gh api orgs/&lt;org&gt;/teams/&lt;slug&gt;/members</code></td></tr><tr><td>Quarterly</td><td>Agent register review; remove unused apps</td><td>AI lead</td><td><code>agent-register.yaml</code></td></tr><tr><td>Quarterly</td><td>Ruleset review: approvals, contexts, bypass list</td><td>platform</td><td><code>rulesets/*.json</code></td></tr><tr><td>Per release</td><td>Release checklist and public acceptance</td><td>platform</td><td><code>CONTRIBUTING.md</code></td></tr></tbody></table></div>
+<h3 id="offboarding-a-person">Offboarding a person</h3>
+<p>Same day, in this order:</p>
+<ol><li><code>gh api -X DELETE orgs/&lt;org&gt;/members/&lt;login&gt;</code></li><li>Remove from every team; confirm no direct repository collaborator remains</li><li>Revoke personal access tokens and SSH keys</li><li>Rotate every shared secret they could read (<code>secrets-inventory.yaml</code> says which)</li><li>Transfer ownership of any app, environment or release they owned</li><li>Record the date in the access review log</li></ol>
+<p>Step 4 is the one that gets skipped. A leaver who could read <code>CLOUDFLARE_API_TOKEN</code> is a reason to rotate it, not a reason to hope.</p>
+<hr />
+<h2 id="when-a-gate-is-red">When a gate is red</h2>
+<div class="table-wrap"><table><thead><tr><th>Check</th><th>Likely cause</th><th>Action</th></tr></thead><tbody><tr><td><code>security / action pins</code></td><td>A <code>PIN-TODO</code> marker is still in a workflow</td><td><code>enterprise/governance/pin-actions.sh</code>, commit, re-run</td></tr><tr><td><code>scope</code></td><td>The diff cannot be classified</td><td>Check <code>scripts/ci-scope.mjs</code>; full coverage is the safe default, so investigate rather than widen</td></tr><tr><td><code>zip-freshness</code></td><td><code>archify.zip</code> is stale</td><td><code>scripts/build-zip.sh archify.zip</code>, commit the result</td></tr><tr><td><code>published-update-manifest</code></td><td><code>stable.json</code> points at a version with no Release, or a mismatched asset</td><td>Publish the Release first; the manifest is a follow-up commit</td></tr><tr><td><code>test (18/20/24)</code></td><td>A runtime-specific API was used</td><td>Fix the code; do not drop a runtime from the matrix</td></tr><tr><td><code>Windows test portability</code></td><td>A path assumption that only holds on POSIX</td><td>Use the portable path helpers under <code>archify/renderers/shared/</code></td></tr><tr><td><code>security / codeql</code></td><td>A genuine finding, or a fork PR</td><td>Fork PRs are expected to skip; a same-repo finding is a real alert</td></tr><tr><td><code>governance / drift</code></td><td>Live state changed outside this repository, or desired state is stale</td><td><code>verify.sh</code> names the field; decide which side is right, then fix that side</td></tr><tr><td>Release job waiting</td><td><code>production</code> environment approval</td><td>A platform reviewer approves; the tag pusher cannot self-approve</td></tr></tbody></table></div>
+<hr />
+<h2 id="appendix-a-command-reference">Appendix A — Command reference</h2>
+<pre><code class="language-sh"># Apply and verify
+enterprise/governance/apply.sh --org &lt;org&gt; --repo &lt;org&gt;/archify --dry-run
+enterprise/governance/apply.sh --org &lt;org&gt; --repo &lt;org&gt;/archify
+enterprise/governance/verify.sh --org &lt;org&gt; --repo &lt;org&gt;/archify --report drift.md
+enterprise/governance/pin-actions.sh
+
+# Access
+gh api orgs/&lt;org&gt;/members?role=admin --jq '.[].login'
+gh api orgs/&lt;org&gt;/teams --jq '.[].slug'
+gh api orgs/&lt;org&gt;/teams/ai-agents/members --jq 'length'
+
+# Protection
+gh api orgs/&lt;org&gt;/rulesets --jq '.[] | {name, target, enforcement}'
+gh api orgs/&lt;org&gt;/rulesets/&lt;id&gt; --jq '.rules[].type'
+gh api repos/&lt;org&gt;/archify/environments --jq '.environments[].name'
+
+# Scanning
+gh api repos/&lt;org&gt;/archify --jq .security_and_analysis
+gh api repos/&lt;org&gt;/archify/code-scanning/analyses --jq '.[0]'
+
+# Release
+gh run list --workflow release.yml --limit 5
+gh release view &lt;tag&gt; --json assets --jq '.assets[].name'
+gh attestation verify archify.zip --repo &lt;org&gt;/archify</code></pre>
+<h2 id="appendix-b-phase-record-template">Appendix B — Phase record template</h2>
+<pre><code class="language-markdown">## Phase &lt;n&gt; — &lt;name&gt;
+Date:            &lt;YYYY-MM-DD&gt;
+Operator:        &lt;name&gt;
+Plan:            Free | Team | Enterprise Cloud
+Applied by:      apply.sh &lt;scope&gt; | UI | both
+Verify output:   &lt;link or inline&gt;
+Evidence:        &lt;links, screenshots, run ids&gt;
+Deviations:      &lt;what was skipped and why, with owner and follow-up&gt;
+Rollback tested: yes | no</code></pre>
+<p>A phase with an empty <em>Deviations</em> line is either genuinely complete or unexamined. Say which.</p>
+<h2 id="appendix-c-decision-log">Appendix C — Decision log</h2>
+<p>Record decisions that will otherwise be relitigated:</p>
+<div class="table-wrap"><table><thead><tr><th>Decision</th><th>Date</th><th>Owner</th><th>Rationale</th></tr></thead><tbody><tr><td>Auto-merge disabled repository-wide</td><td>2026-11-03</td><td>platform</td><td>No unattended merge path for a bot or agent</td></tr><tr><td>CodeQL required via ruleset rule, not a required check</td><td>2026-11-03</td><td>security</td><td>Fork PRs cannot upload results; the rule blocks regardless of author</td></tr><tr><td>1 approval on <code>archify</code>, 2 on payment/auth/infra repos</td><td>2026-11-03</td><td>eng lead</td><td>Single-maintainer repository; revisit when the team grows</td></tr><tr><td>Personal accounts + 2FA until an IdP exists</td><td>2026-11-03</td><td>eng lead</td><td>No company login system yet; EMU decided before the team grows</td></tr><tr><td>Preview deployments hold the Cloudflare token</td><td>2026-11-03</td><td>platform</td><td>Environment separation prevents fork access; revisit at 5+ contributors</td></tr></tbody></table></div>
+    <div class="pagefoot"><a href="agent-governance.html"><span class="dir">Previous</span>Agent governance</a><a class="next" href="diagrams.html"><span class="dir">Next</span>Diagrams</a></div>
+  </main>
+</div>
+</body>
+</html>
